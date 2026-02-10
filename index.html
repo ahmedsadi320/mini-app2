@@ -244,7 +244,7 @@
                 
                 // রেফারকারীকে বোনাস দেওয়ার লজিক
                 if (startParam && startParam !== String(uId)) {
-                    const inviterRef = firebase.database().ref('users/' + startParam);
+                    const inviterRef = db.ref('users/' + startParam);
                     inviterRef.once('value').then(is => {
                         if (is.exists()) {
                             inviterRef.update({

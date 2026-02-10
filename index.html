@@ -210,11 +210,20 @@
     </nav>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSy...", databaseURL: "https://mini-bot-26c78-default-rtdb.firebaseio.com", projectId: "mini-bot-26c78" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+    // আপনার নতুন fojikearn প্রোজেক্টের কনফিগ (পুরানো কনফিগ মুছে এখানে দিন)
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
+        databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
+        projectId: "fojikearn" 
+    };
+
+    // ডাটাবেস ইনিশিয়ালাইজ করুন
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    // এরপর বাকি কোডগুলো আগের মতোই থাকবে...
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
         const user = tg.initDataUnsafe?.user; // Const কে const করা হয়েছে
         const uId = user?.id || "guest_user";

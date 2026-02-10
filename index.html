@@ -229,27 +229,33 @@
         const uId = user?.id || "guest_user";
         const uRef = db.ref('users/' + uId);
         let bal = 0;
-		// রেফারেল বোনাস এবং ডাটা সেটআপ লজিক
-const startParam = tg.initDataUnsafe?.start_param;
-uRef.once('value').then(s => {
-    if (!s.exists()) {
-        // নতুন ইউজার হলে ডাটাবেসে এন্ট্রি হবে
-        uRef.set({balance: 0, referrals: 0, adsWatched: 0, last_reset_day: new Date().toDateString()});
-        
-        // যদি কেউ রেফার লিংকে আসে তবে রেফারকারীকে ৪০ টাকা দিন
-        if (startParam && startParam !== uId) {
-            const inviterRef = db.ref('users/' + startParam);
-            inviterRef.once('value').then(is => {
-                if (is.exists()) {
-                    inviterRef.update({
-                        balance: (is.val().balance || 0) + 40,
-                        referrals: (is.val().referrals || 0) + 1
+
+        // রেফারেল লজিক (সংশোধিত)
+        const startParam = tg.initDataUnsafe?.start_param;
+        uRef.once('value').then(s => {
+            if (!s.exists()) {
+                // নতুন ইউজার হলে ডাটাবেসে এন্ট্রি হবে
+                uRef.set({
+                    balance: 0, 
+                    referrals: 0, 
+                    adsWatched: 0, 
+                    last_reset_day: new Date().toDateString()
+                });
+                
+                // রেফারকারীকে বোনাস দেওয়ার লজিক
+                if (startParam && startParam !== String(uId)) {
+                    const inviterRef = firebase.database().ref('users/' + startParam);
+                    inviterRef.once('value').then(is => {
+                        if (is.exists()) {
+                            inviterRef.update({
+                                balance: (is.val().balance || 0) + 40,
+                                referrals: (is.val().referrals || 0) + 1
+                            });
+                        }
                     });
                 }
-            });
-        }
-    }
-});
+            }
+        });
 
         // আপনার অ্যাড লিঙ্কগুলো (এটি ফাংশনের বাইরে থাকতে হবে)
         const adLinks = [

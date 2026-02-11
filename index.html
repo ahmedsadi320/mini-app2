@@ -171,7 +171,7 @@
     <div id="withdraw" class="page">
     <h2 style="margin-bottom:15px;">💰 Withdraw</h2>
     <div class="card" style="text-align: left;">
-        <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+ style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
             <p style="font-size: 13px; color: #3b82f6; font-weight:bold;">Minimum Withdraw: 800.00 TAKA</p>
 			<p style="font-size: 13px; color: #ccc; margin-bottom: 10px;">
     
@@ -210,90 +210,96 @@
     </nav>
 
     <script>
-        // আপনার নতুন fojikearn প্রোজেক্টের কনফিগ
+// ১. আপনার ফায়ারবেস কনফিগ
 const firebaseConfig = { 
     apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
     databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
     projectId: "fojikearn" 
 };
 
-// ডাটাবেস ইনিশিয়ালাইজ করুন
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-        const user = tg.initDataUnsafe?.user; // Const কে const করা হয়েছে
-        const uId = user?.id || "guest_user";
-        const uRef = db.ref('users/' + uId);
-        let bal = 0;
-		// ১০০০% গ্যারান্টিড রেফারেল লজিক
-        const urlParams = new URLSearchParams(window.location.search);
-        let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
+// ২. ইউজার ইনফো
+const user = tg.initDataUnsafe?.user;
+const uId = user?.id || "guest_user";
+const uRef = db.ref('users/' + uId);
+let bal = 0;
 
-        // যদি রেফারেল আইডি না পাওয়া যায়, তবে ম্যানুয়ালি লিঙ্কের শেষ অংশ থেকে নেওয়ার চেষ্টা
-        if (!startParam) {
-            const fullUrl = window.location.href;
-            const match = fullUrl.match(/startapp=([a-zA-Z0-9_]+)/);
-            if (match) startParam = match[1];
-        }
+// ৩. রেফারেল আইডি ধরার লজিক
+const urlParams = new URLSearchParams(window.location.search);
+let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
 
-        uRef.once('value').then(snapshot => {
-            if (!snapshot.exists()) {
-                uRef.set({
-                    balance: 0, 
-                    referrals: 0, 
-                    adsWatched: 0, 
-                    last_reset_day: new Date().toDateString()
-                }).then(() => {
-                    if (startParam && String(startParam) !== String(uId)) {
-                        const inviterRef = db.ref('users/' + startParam);
-                        inviterRef.update({
-                            balance: firebase.database.ServerValue.increment(40),
-                            referrals: firebase.database.ServerValue.increment(1)
-                        });
+// ৪. ইউজার চেক এবং রেফারেল বোনাস প্রদান (সঠিক নিয়ম)
+uRef.once('value').then(snapshot => {
+    if (!snapshot.exists()) {
+        // নতুন ইউজারের প্রোফাইল তৈরি
+        uRef.set({
+            balance: 0, 
+            referrals: 0, 
+            adsWatched: 0, 
+            last_reset_day: new Date().toDateString()
+        }).then(() => {
+            // যদি রেফারেল আইডি থাকে এবং সেটা ইউজারের নিজের আইডি না হয়
+            if (startParam && String(startParam) !== String(uId)) {
+                const inviterRef = db.ref('users/' + startParam);
+                
+                // ট্রানজেকশন ব্যবহার করে ইনভাইটারের ডাটা আপডেট (সবচেয়ে নিরাপদ পদ্ধতি)
+                inviterRef.transaction((currentData) => {
+                    if (currentData) {
+                        currentData.balance = (currentData.balance || 0) + 40;
+                        currentData.referrals = (currentData.referrals || 0) + 1;
                     }
+                    return currentData;
                 });
             }
         });
+    }
+});
 
-        // আপনার অ্যাড লিঙ্কগুলো (এটি ফাংশনের বাইরে থাকতে হবে)
-        const adLinks = [
-            'https://omg10.com/4/10588504',
-            'https://omg10.com/4/10588503',
-            'https://omg10.com/4/10588504',
-            'https://omg10.com/4/10588503'
-        ];
+// ৫. অ্যাড লিঙ্ক
+const adLinks = [
+    'https://omg10.com/4/10588504',
+    'https://omg10.com/4/10588503',
+    'https://omg10.com/4/10588504',
+    'https://omg10.com/4/10588503'
+];
 
-        // ১. প্রোফাইল ডাটা আপডেট
-        uRef.on('value', (s) => {
-            const d = s.val() || {balance:0, referrals:0, adsWatched:0};
-			const today = new Date().toDateString();
+// ৬. প্রোফাইল ডাটা রিয়েলটাইম আপডেট
+uRef.on('value', (s) => {
+    const d = s.val() || {balance:0, referrals:0, adsWatched:0};
+    const today = new Date().toDateString();
+
     if (d.last_reset_day !== today) {
         uRef.update({ adsWatched: 0, last_reset_day: today });
         return; 
-	}
-            bal = d.balance || 0;
+    }
+    
+    bal = d.balance || 0;
 
-            if (user && user.photo_url) {
-                const photoEl = document.getElementById('user-photo');
-                if(photoEl) photoEl.src = user.photo_url;
-            }
+    if (user && user.photo_url) {
+        const photoEl = document.getElementById('user-photo');
+        if(photoEl) photoEl.src = user.photo_url;
+    }
 
-            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = bal.toFixed(2);
-            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
+    if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = bal.toFixed(2);
+    if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+    
+    // এখানে আপনার সমস্যার সমাধান: ৯ এর বদলে ১০ করা হয়েছে
+    if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
 
-            const nameEl = document.getElementById('u-name');
-            if(nameEl) {
-                nameEl.innerHTML = (user ? user.first_name : "User") + ' <img src="https://upload.wikimedia.org/wikipedia/commons/e/e4/Twitter_Verified_Badge.svg" style="width: 16px; vertical-align: middle; margin-left: 5px;">';
-            }
+    const nameEl = document.getElementById('u-name');
+    if(nameEl) {
+        nameEl.innerHTML = (user ? user.first_name : "User") + ' <img src="https://upload.wikimedia.org/wikipedia/commons/e/e4/Twitter_Verified_Badge.svg" style="width: 16px; vertical-align: middle; margin-left: 5px;">';
+    }
 
-            const refUrlEl = document.getElementById('ref-url');
-            if(refUrlEl) {
-                refUrlEl.innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-            }
-        });
+    const refUrlEl = document.getElementById('ref-url');
+    if(refUrlEl) {
+        refUrlEl.innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
+    }
+});
 
         // ২. ৯টি বিজ্ঞাপনের বক্স তৈরি
         uRef.once('value').then(s => {

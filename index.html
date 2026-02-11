@@ -222,7 +222,7 @@ const db = firebase.database();
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// ২. ইউজার ইনফো (টেলিগ্রাম আইডি অনুযায়ী)
+// ২. ইউজার ইনফো
 const user = tg.initDataUnsafe?.user;
 const uId = user?.id ? String(user.id) : "guest_" + Math.floor(Math.random() * 1000);
 const uRef = db.ref('users/' + uId);
@@ -235,17 +235,14 @@ let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start
 // ৪. রেফারেল প্রসেস (একই মোবাইলে ভিন্ন আইডি হলে কাজ করবে)
 uRef.once('value').then(snapshot => {
     if (!snapshot.exists()) {
-        // নতুন আইডি হলে ডাটাবেজে এন্ট্রি হবে
         uRef.set({
             balance: 0, 
             referrals: 0, 
             adsWatched: 0, 
             last_reset_day: new Date().toDateString()
         }).then(() => {
-            // যদি রেফারেল আইডি থাকে এবং সেটা নিজের আইডি না হয়
             if (startParam && String(startParam) !== uId) {
                 const inviterRef = db.ref('users/' + startParam);
-                
                 inviterRef.transaction((currentData) => {
                     if (currentData) {
                         currentData.balance = (currentData.balance || 0) + 40;
@@ -258,21 +255,24 @@ uRef.once('value').then(snapshot => {
     }
 });
 
-// ৫. ড্যাশবোর্ড আপডেট (এখানেই ৯ কে ১০ করা হয়েছে)
+// ৫. ড্যাশবোর্ড আপডেট (রিয়েলটাইম)
 uRef.on('value', (s) => {
     const d = s.val() || {balance:0, referrals:0, adsWatched:0};
     bal = d.balance || 0;
 
     if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = bal.toFixed(2);
     if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-    
-    // আপনার সমস্যার সমাধান: এখানে ১০ করে দেওয়া হয়েছে
     if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
 
     if(document.getElementById('ref-url')) {
         document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-	}
+    }
 
+    const nameEl = document.getElementById('u-name');
+    if(nameEl && user) {
+        nameEl.innerHTML = user.first_name + ' <span style="color:#3b82f6">✔️</span>';
+    }
+});
         // ২. ৯টি বিজ্ঞাপনের বক্স তৈরি
         uRef.once('value').then(s => {
             const d = s.val() || {};

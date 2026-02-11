@@ -282,7 +282,7 @@ const db = firebase.database();
 
             if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = bal.toFixed(2);
             if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 9";
+            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
 
             const nameEl = document.getElementById('u-name');
             if(nameEl) {
@@ -305,7 +305,7 @@ const db = firebase.database();
             if(!adList) return;
             adList.innerHTML = ""; 
 
-            for(let i=1; i<=9; i++) {
+            for(let i=1; i<=10; i++) {
                 const btnId = `ad-${i}`;
                 const currentLink = adLinks[(i-1) % adLinks.length];
                 const isDone = (completedTasks[btnId] === today);

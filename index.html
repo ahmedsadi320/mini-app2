@@ -229,24 +229,24 @@
         const uId = user?.id || "guest_user";
         const uRef = db.ref('users/' + uId);
         let bal = 0;
-        // ১০০% ওয়ার্কিং রেফারেল লজিক (একই ফোনে টেস্ট করার জন্য)
-        const startParam = tg.initDataUnsafe?.start_param;
-        
+        // একই ফোনে রেফারেল নিশ্চিত করার উন্নত লজিক
+        const urlParams = new URLSearchParams(window.location.search);
+        const startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
+
         uRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
-                // ১. আগে নতুন ইউজারের জন্য ডাটাবেস তৈরি নিশ্চিত করা
+                // নতুন ইউজার প্রোফাইল
                 uRef.set({
                     balance: 0, 
                     referrals: 0, 
                     adsWatched: 0, 
                     last_reset_day: new Date().toDateString()
                 }).then(() => {
-                    // ২. ইউজার তৈরির পর রেফারেল চেক করা (অপেক্ষা করে)
+                    // রেফারেল চেক
                     if (startParam && String(startParam).trim() !== String(uId).trim()) {
                         const inviterRef = db.ref('users/' + String(startParam).trim());
                         inviterRef.once('value').then(inviterSnap => {
                             if (inviterSnap.exists()) {
-                                // ৩. রেফারকারীকে বোনাস পৌঁছে দেওয়া
                                 inviterRef.update({
                                     balance: firebase.database.ServerValue.increment(40),
                                     referrals: firebase.database.ServerValue.increment(1)

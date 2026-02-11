@@ -227,26 +227,23 @@ const user = tg.initDataUnsafe?.user;
 const uId = user?.id || "guest_user";
 const uRef = db.ref('users/' + uId);
 let bal = 0;
-
-// ৩. রেফারেল আইডি ধরার লজিক
+// রেফারেল আইডি ধরার উন্নত লজিক
 const urlParams = new URLSearchParams(window.location.search);
 let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
 
-// ৪. ইউজার চেক এবং রেফারেল বোনাস প্রদান (সঠিক নিয়ম)
 uRef.once('value').then(snapshot => {
+    // শুধুমাত্র একদম নতুন ইউজারের জন্য বোনাস কার্যকর হবে
     if (!snapshot.exists()) {
-        // নতুন ইউজারের প্রোফাইল তৈরি
         uRef.set({
             balance: 0, 
             referrals: 0, 
             adsWatched: 0, 
             last_reset_day: new Date().toDateString()
         }).then(() => {
-            // যদি রেফারেল আইডি থাকে এবং সেটা ইউজারের নিজের আইডি না হয়
+            // রেফারেল বোনাস লজিক
             if (startParam && String(startParam) !== String(uId)) {
                 const inviterRef = db.ref('users/' + startParam);
                 
-                // ট্রানজেকশন ব্যবহার করে ইনভাইটারের ডাটা আপডেট (সবচেয়ে নিরাপদ পদ্ধতি)
                 inviterRef.transaction((currentData) => {
                     if (currentData) {
                         currentData.balance = (currentData.balance || 0) + 40;
@@ -258,7 +255,6 @@ uRef.once('value').then(snapshot => {
         });
     }
 });
-
 // ৫. অ্যাড লিঙ্ক
 const adLinks = [
     'https://omg10.com/4/10588504',

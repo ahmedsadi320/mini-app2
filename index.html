@@ -210,109 +210,88 @@
     </nav>
 
     <script>
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
-            databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
-            projectId: "fojikearn" 
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
+        databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
+        projectId: "fojikearn" 
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-        const user = tg.initDataUnsafe?.user;
-        const uId = user?.id || "guest_user";
-        const uRef = db.ref('users/' + uId);
+    const user = tg.initDataUnsafe?.user;
+    const uId = user?.id || "guest_user";
+    const uRef = db.ref('users/' + uId);
+    let currentBalance = 0; // ব্যালেন্স ধরার জন্য ভেরিয়েবল
 
-        // --- ১০০% গ্যারান্টিড রেফারেল লজিক (ইউআরএল থেকে সরাসরি আইডি নেবে) ---
-        function checkReferral() {
-            const urlParams = new URLSearchParams(window.location.search);
-            let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
+    // ১. গ্যারান্টিড রেফারেল লজিক
+    function checkReferral() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
 
-            // ইউআরএল থেকে ম্যানুয়ালি আইডি খোঁজা (যদি টেলিগ্রাম মিস করে)
-            if (!startParam) {
-                const match = window.location.href.match(/startapp=([a-zA-Z0-9_]+)/);
-                if (match) startParam = match[1];
-            }
-
-            uRef.once('value').then(snap => {
-                if (!snap.exists()) {
-                    // নতুন ইউজার তৈরি
-                    uRef.set({
-                        balance: 0,
-                        referrals: 0,
-                        adsWatched: 0,
-                        last_reset_day: new Date().toDateString(),
-                        joined_at: firebase.database.ServerValue.TIMESTAMP
-                    }).then(() => {
-                        // যদি রেফারেল আইডি থাকে এবং সেটি নিজের না হয়
-                        if (startParam && String(startParam) !== String(uId)) {
-                            const inviterRef = db.ref('users/' + startParam);
-                            inviterRef.once('value').then(invSnap => {
-                                if (invSnap.exists()) {
-                                    inviterRef.update({
-                                        balance: firebase.database.ServerValue.increment(40),
-                                        referrals: firebase.database.ServerValue.increment(1)
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            });
+        if (!startParam) {
+            const match = window.location.href.match(/startapp=([a-zA-Z0-9_]+)/);
+            if (match) startParam = match[1];
         }
-        checkReferral();
 
-        // ডাটা লোড করা
-        uRef.on('value', snap => {
-            const d = snap.val() || {balance:0, referrals:0, adsWatched:0};
-            document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
-            document.getElementById('u-ref').innerText = d.referrals || 0;
-            document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 9";
-            document.getElementById('u-name').innerText = user ? user.first_name : "User";
+        uRef.once('value').then(snap => {
+            if (!snap.exists()) {
+                uRef.set({
+                    balance: 0,
+                    referrals: 0,
+                    adsWatched: 0,
+                    last_reset_day: new Date().toDateString(),
+                    joined_at: firebase.database.ServerValue.TIMESTAMP
+                }).then(() => {
+                    if (startParam && String(startParam) !== String(uId)) {
+                        const inviterRef = db.ref('users/' + startParam);
+                        inviterRef.once('value').then(invSnap => {
+                            if (invSnap.exists()) {
+                                inviterRef.update({
+                                    balance: firebase.database.ServerValue.increment(40),
+                                    referrals: firebase.database.ServerValue.increment(1)
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+    checkReferral();
+
+    // ২. প্রোফাইল ডাটা রিয়েলটাইম আপডেট
+    uRef.on('value', (s) => {
+        const d = s.val() || {balance:0, referrals:0, adsWatched:0};
+        const today = new Date().toDateString();
+
+        if (d.last_reset_day !== today) {
+            uRef.update({ adsWatched: 0, last_reset_day: today });
+            return; 
+        }
+
+        currentBalance = d.balance || 0;
+
+        if (document.getElementById('u-balance')) document.getElementById('u-balance').innerText = currentBalance.toFixed(2);
+        if (document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+        if (document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 9";
+        
+        if (document.getElementById('u-name')) {
+            document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
+        }
+        
+        if (document.getElementById('ref-url')) {
             document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-        });
+        }
+    });
 
-        // অ্যাড লিস্ট তৈরি
-        const adLinks
-
-        // আপনার অ্যাড লিঙ্কগুলো (এটি ফাংশনের বাইরে থাকতে হবে)
-        const adLinks = [
-            'https://omg10.com/4/10588503',
-            'https://omg10.com/4/10588504',
-            'https://omg10.com/4/10588503',
-            'https://omg10.com/4/10588504'
-        ];
-
-        // ১. প্রোফাইল ডাটা আপডেট
-        uRef.on('value', (s) => {
-            const d = s.val() || {balance:0, referrals:0, adsWatched:0};
-			const today = new Date().toDateString();
-    if (d.last_reset_day !== today) {
-        uRef.update({ adsWatched: 0, last_reset_day: today });
-        return; 
-	}
-            bal = d.balance || 0;
-
-            if (user && user.photo_url) {
-                const photoEl = document.getElementById('user-photo');
-                if(photoEl) photoEl.src = user.photo_url;
-            }
-
-            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = bal.toFixed(2);
-            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 9";
-
-            const nameEl = document.getElementById('u-name');
-            if(nameEl) {
-                nameEl.innerHTML = (user ? user.first_name : "User") + ' <img src="https://upload.wikimedia.org/wikipedia/commons/e/e4/Twitter_Verified_Badge.svg" style="width: 16px; vertical-align: middle; margin-left: 5px;">';
-            }
-
-            const refUrlEl = document.getElementById('ref-url');
-            if(refUrlEl) {
-                refUrlEl.innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-            }
-        });
+    const adLinks = [
+        'https://omg10.com/4/10588503',
+        'https://omg10.com/4/10588504',
+        'https://omg10.com/4/10588503',
+        'https://omg10.com/4/10588504'
+    ];
 
         // ২. ৯টি বিজ্ঞাপনের বক্স তৈরি
         uRef.once('value').then(s => {

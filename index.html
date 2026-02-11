@@ -305,7 +305,7 @@ const db = firebase.database();
             if(!adList) return;
             adList.innerHTML = ""; 
 
-            for(let i=1; i<=10; i++) {
+            for(let i=1; i<=9; i++) {
                 const btnId = `ad-${i}`;
                 const currentLink = adLinks[(i-1) % adLinks.length];
                 const isDone = (completedTasks[btnId] === today);

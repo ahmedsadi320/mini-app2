@@ -210,7 +210,7 @@
     </nav>
 
     <script>
-// ১. আপনার ফায়ারবেস কনফিগ
+// ১. ফায়ারবেস কনফিগ
 const firebaseConfig = { 
     apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
     databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
@@ -222,26 +222,28 @@ const db = firebase.database();
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// ২. ইউজার ইনফো
+// ২. ইউজার ইনফো (টেলিগ্রাম আইডি অনুযায়ী)
 const user = tg.initDataUnsafe?.user;
-const uId = user?.id || "guest_user";
+const uId = user?.id ? String(user.id) : "guest_" + Math.floor(Math.random() * 1000);
 const uRef = db.ref('users/' + uId);
 let bal = 0;
-// রেফারেল আইডি ধরার উন্নত লজিক
+
+// ৩. রেফারেল আইডি ধরা
 const urlParams = new URLSearchParams(window.location.search);
 let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
 
+// ৪. রেফারেল প্রসেস (একই মোবাইলে ভিন্ন আইডি হলে কাজ করবে)
 uRef.once('value').then(snapshot => {
-    // শুধুমাত্র একদম নতুন ইউজারের জন্য বোনাস কার্যকর হবে
     if (!snapshot.exists()) {
+        // নতুন আইডি হলে ডাটাবেজে এন্ট্রি হবে
         uRef.set({
             balance: 0, 
             referrals: 0, 
             adsWatched: 0, 
             last_reset_day: new Date().toDateString()
         }).then(() => {
-            // রেফারেল বোনাস লজিক
-            if (startParam && String(startParam) !== String(uId)) {
+            // যদি রেফারেল আইডি থাকে এবং সেটা নিজের আইডি না হয়
+            if (startParam && String(startParam) !== uId) {
                 const inviterRef = db.ref('users/' + startParam);
                 
                 inviterRef.transaction((currentData) => {
@@ -255,47 +257,21 @@ uRef.once('value').then(snapshot => {
         });
     }
 });
-// ৫. অ্যাড লিঙ্ক
-const adLinks = [
-    'https://omg10.com/4/10588504',
-    'https://omg10.com/4/10588503',
-    'https://omg10.com/4/10588504',
-    'https://omg10.com/4/10588503'
-];
 
-// ৬. প্রোফাইল ডাটা রিয়েলটাইম আপডেট
+// ৫. ড্যাশবোর্ড আপডেট (এখানেই ৯ কে ১০ করা হয়েছে)
 uRef.on('value', (s) => {
     const d = s.val() || {balance:0, referrals:0, adsWatched:0};
-    const today = new Date().toDateString();
-
-    if (d.last_reset_day !== today) {
-        uRef.update({ adsWatched: 0, last_reset_day: today });
-        return; 
-    }
-    
     bal = d.balance || 0;
-
-    if (user && user.photo_url) {
-        const photoEl = document.getElementById('user-photo');
-        if(photoEl) photoEl.src = user.photo_url;
-    }
 
     if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = bal.toFixed(2);
     if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
     
-    // এখানে আপনার সমস্যার সমাধান: ৯ এর বদলে ১০ করা হয়েছে
+    // আপনার সমস্যার সমাধান: এখানে ১০ করে দেওয়া হয়েছে
     if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
 
-    const nameEl = document.getElementById('u-name');
-    if(nameEl) {
-        nameEl.innerHTML = (user ? user.first_name : "User") + ' <img src="https://upload.wikimedia.org/wikipedia/commons/e/e4/Twitter_Verified_Badge.svg" style="width: 16px; vertical-align: middle; margin-left: 5px;">';
-    }
-
-    const refUrlEl = document.getElementById('ref-url');
-    if(refUrlEl) {
-        refUrlEl.innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-    }
-});
+    if(document.getElementById('ref-url')) {
+        document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
+	}
 
         // ২. ৯টি বিজ্ঞাপনের বক্স তৈরি
         uRef.once('value').then(s => {

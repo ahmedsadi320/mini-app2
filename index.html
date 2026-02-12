@@ -341,8 +341,7 @@ const db = firebase.database();
             const completedTasks = d.completedTasks || {};
             
             if (completedTasks['telegram_joined']) {
-                tg.showAlert("আপনি ইতিমধ্যে টেলিগ্রাম বোনাস নিয়ে নিয়েছেন।");
-                joinBtn.innerText = "Already Claimed";
+                joinBtn.innerText = "Already Claimed✅";
                 joinBtn.disabled = true;
                 return;
             }
@@ -362,7 +361,7 @@ const db = firebase.database();
                     balance: currentBal + amount,
                     completedTasks: completedTasks
                 }).then(() => {
-                    tg.showAlert(`টেলিগ্রাম বোনাস ${amount} টাকা জমা হয়েছে! ✅`);
+                    tg.showAlert(`Channel join bonus claimed✅`);
                     joinBtn.innerText = "Claimed ✅";
                     joinBtn.style.background = "#28a745";
                 });
@@ -401,10 +400,9 @@ const db = firebase.database();
                         adsWatched: (d.adsWatched || 0) + 1,
                         completedTasks: completedTasks
                     }).then(() => {
-                        tg.showAlert(`বিজ্ঞাপনের বোনাস ${amount} টাকা যোগ হয়েছে। ✅`);
+                        tg.showAlert(`Daily bonus claimed✅`);
                     });
                 } else {
-                    tg.showAlert("এই বিজ্ঞাপনের আজকের বোনাস আপনি নিয়ে নিয়েছেন।");
                 }
             });
         }, 15000); 

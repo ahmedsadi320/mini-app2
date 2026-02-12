@@ -330,31 +330,69 @@ const db = firebase.database();
 
         function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
-    
-    // ১. বাটনের আইডি সঠিকভাবে ধরা (Loading... নিশ্চিত করতে)
+
+    // --- ১. টেলিগ্রাম জয়েন টাস্কের জন্য লজিক ---
+    if (btnId === 'join-btn') {
+        const joinBtn = document.getElementById('join-btn');
+        
+        // চেক করুন ইউজার আগে এই বোনাস নিয়েছে কি না (একবারই পাবে)
+        uRef.once('value').then(s => {
+            const d = s.val() || {};
+            const completedTasks = d.completedTasks || {};
+            
+            if (completedTasks['telegram_joined']) {
+                tg.showAlert("আপনি ইতিমধ্যে টেলিগ্রাম বোনাস নিয়ে নিয়েছেন।");
+                joinBtn.innerText = "Already Claimed";
+                joinBtn.disabled = true;
+                return;
+            }
+
+            // যদি না নিয়ে থাকে, তবে লিঙ্কে পাঠাবে
+            tg.openTelegramLink(link); // টেলিগ্রাম লিঙ্ক ওপেন করার সঠিক পদ্ধতি
+            
+            joinBtn.innerText = "Verifying...";
+            joinBtn.style.pointerEvents = "none";
+
+            // ৫ সেকেন্ড পর অটো বোনাস ক্লেইম হবে (টেলিগ্রাম সরাসরি ভেরিফাই করা যায় না API ছাড়া)
+            setTimeout(() => {
+                const currentBal = d.balance || 0;
+                completedTasks['telegram_joined'] = true;
+                
+                uRef.update({
+                    balance: currentBal + amount,
+                    completedTasks: completedTasks
+                }).then(() => {
+                    tg.showAlert(`টেলিগ্রাম বোনাস ${amount} টাকা জমা হয়েছে! ✅`);
+                    joinBtn.innerText = "Claimed ✅";
+                    joinBtn.style.background = "#28a745";
+                });
+            }, 5000);
+        });
+        return; // টেলিগ্রাম টাস্ক হলে এখানেই শেষ, নিচের অ্যাড লজিক কাজ করবে না
+    }
+
+    // --- ২. বিজ্ঞাপন (Ad) টাস্কের জন্য লজিক ---
     const btnNum = btnId.split('-')[1]; 
     const btn = document.getElementById(`ad-btn-${btnNum}`);
     
     if (btn) {
-        btn.innerText = "Loading..."; // ক্লিক করার সাথে সাথে এটি আসবে
-        btn.style.pointerEvents = "none"; // অ্যাড লোড হওয়ার আগে ডাবল ক্লিক বন্ধ
+        btn.innerText = "Loading Ad..."; 
+        btn.style.pointerEvents = "none";
     }
 
-    // ২. রিওয়ার্ডেড পপআপ কল করা (এক ক্লিকে একটি অ্যাড গ্যারান্টি)
+    // বিজ্ঞাপনের পপআপ কল করা
     show_10588358().then(() => {
-        // বিজ্ঞাপন শুরু হলে বাটন আবার 'Verify' হয়ে যাবে যাতে ইউজার আবার ক্লিক করতে পারে
         if (btn) {
             btn.innerText = "Verify";
             btn.style.pointerEvents = "auto";
         }
 
-        // ৩. অ্যাড দেখা শেষ হলে ১৫ সেকেন্ড পর টাকা জমা হবে
+        // ১৫ সেকেন্ড পর ব্যালেন্স যোগ হবে
         setTimeout(() => {
             uRef.once('value').then(s => {
                 const d = s.val() || {};
                 const completedTasks = d.completedTasks || {};
 
-                // দিনে কেবল একবারই প্রতি বক্সে টাকা যোগ হবে, কিন্তু অ্যাড আনলিমিটেড দেখা যাবে
                 if (completedTasks[btnId] !== today) {
                     const currentBal = d.balance || 0;
                     completedTasks[btnId] = today;
@@ -363,14 +401,16 @@ const db = firebase.database();
                         adsWatched: (d.adsWatched || 0) + 1,
                         completedTasks: completedTasks
                     }).then(() => {
-                        tg.showAlert(`Daily bonus claimed✅`);
+                        tg.showAlert(`বিজ্ঞাপনের বোনাস ${amount} টাকা যোগ হয়েছে। ✅`);
                     });
+                } else {
+                    tg.showAlert("এই বিজ্ঞাপনের আজকের বোনাস আপনি নিয়ে নিয়েছেন।");
                 }
             });
         }, 15000); 
 
     }).catch(e => {
-        // যদি অ্যাড না আসে তবে বাটন ঠিক করে ব্যাকআপ লিংকে পাঠানো
+        // অ্যাড লোড না হলে ব্যাকআপ লিঙ্কে পাঠানো
         if (btn) {
             btn.innerText = "Verify";
             btn.style.pointerEvents = "auto";

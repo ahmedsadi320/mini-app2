@@ -328,8 +328,8 @@ const db = firebase.database();
         });
 
 
-		let adStartTime = 0; 
-let isCounting = false;
+		let adStartTimes = {}; // প্রতিটি বাটনের সময় মনে রাখার জন্য
+let isWatching = {};   // ইউজার এখন এডে আছে কি না তা ট্র্যাক করতে
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
@@ -337,66 +337,62 @@ function handleTask(btnId, link, amount) {
     const btn = document.getElementById(`ad-btn-${btnNum}`);
     const msg = document.getElementById(`msg-${btnId}`);
 
-    // ১. টাস্ক শুরু - সময় রেকর্ড করা
-    adStartTime = Date.now(); 
-    isCounting = true;
-
-    // বাটন লক করা যাতে বারবার ক্লিক না লাগে
-    btn.innerText = "বিজ্ঞাপন দেখছেন...";
-    btn.style.pointerEvents = "none";
-    btn.style.opacity = "0.6";
-
-    // অ্যাড ওপেন করা
-    window.open(link, '_blank');
-
-    // ২. ফিরে আসার সময় চেক করার ফাংশন
-    const onReturnCheck = () => {
-        // ইউজার ফিরে আসা মাত্রই ইভেন্ট রিমুভ করা যাতে দ্বিতীয়বার কাজ না করে
-        window.removeEventListener('focus', onReturnCheck);
+    // ১. প্রথমবার ক্লিক: বিজ্ঞাপনে পাঠানো
+    if (!isWatching[btnId]) {
+        adStartTimes[btnId] = Date.now(); // যাওয়ার সময় সেভ
+        isWatching[btnId] = true;
         
-        if (!isCounting) return;
-        isCounting = false;
+        window.open(link, '_blank'); // অ্যাড ওপেন
 
-        const timeSpentOutside = (Date.now() - adStartTime) / 1000; // কত সেকেন্ড বাইরে ছিল
+        btn.innerText = "Check Task"; // বাটন পরিবর্তন
+        btn.style.background = "#ffc107"; // হলুদ রঙ (ইউজারকে বোঝাতে যে কাজ বাকি)
+        btn.style.color = "#000";
+    } 
+    // ২. দ্বিতীয়বার ক্লিক: ইউজার ফিরে এসে চেক করবে
+    else {
+        const timeSpent = (Date.now() - adStartTimes[btnId]) / 1000; // কত সেকেন্ড পার হয়েছে
 
-        if (timeSpentOutside < 15) {
-            // ১৫ সেকেন্ডের আগে ফিরে আসলে কোনোভাবেই টাকা পাবে না
-            tg.showAlert(`❌ আপনি মাত্র ${Math.floor(timeSpentOutside)}s বিজ্ঞাপনে ছিলেন! কমপক্ষে ১৫ সেকেন্ড থাকতে হবে।`);
+        if (timeSpent < 15) {
+            // ১৫ সেকেন্ডের কম থাকলে
+            const left = Math.ceil(15 - timeSpent);
+            tg.showAlert(`আপনি ১৫ সেকেন্ড এড দেখেন নি। আরও ${left} সেকেন্ড দেখুন।`);
             
-            // বাটন রিসেট
+            // বক্স আগের মত হয়ে যাবে যাতে আবার শুরু করতে পারে
             btn.innerText = "Verify";
-            btn.style.pointerEvents = "auto";
-            btn.style.opacity = "1";
+            btn.style.background = "#007bff";
+            btn.style.color = "#fff";
+            isWatching[btnId] = false;
         } else {
-            // ১৫ সেকেন্ড পূর্ণ করে ফিরে আসলে কেবল তখনই ডাটাবেস চেক হবে
+            // ১৫ সেকেন্ড পূর্ণ হলে টাকা দেওয়ার লজিক
             uRef.once('value').then(s => {
                 const d = s.val() || {};
                 const completedTasks = d.completedTasks || {};
 
+                // টাকা প্রতিদিন প্রথমবারই পাবে
                 if (completedTasks[btnId] !== today) {
                     uRef.update({
                         balance: (d.balance || 0) + amount,
                         adsWatched: (d.adsWatched || 0) + 1,
                         [`completedTasks/${btnId}`]: today
                     }).then(() => {
-                        tg.showAlert(`✅ সফল! ১৫ সেকেন্ড থাকার জন্য ${amount} টাকা যোগ হয়েছে।`);
+                        tg.showAlert(`✅ Daily bonus claimed: ${amount} Taka`);
                         if (msg) msg.innerText = "Daily bonus claimed✅";
                     });
                 } else {
-                    tg.showAlert("✅ ভেরিফিকেশন সফল! (টাকা আগেই পেয়েছেন)");
+                    // যদি টাকা আগে নিয়ে থাকে, শুধু মেসেজ দেখাবে
+                    tg.showAlert("✅ ভেরিফিকেশন সফল! (আজকের টাকা আগেই যোগ হয়েছে)");
                     if (msg) msg.innerText = "Daily bonus claimed✅";
                 }
                 
+                // বাটন আগের মত হয়ে যাবে যাতে যতবার খুশি দেখতে পারে
                 btn.innerText = "Verify";
-                btn.style.pointerEvents = "auto";
-                btn.style.opacity = "1";
+                btn.style.background = "#007bff";
+                btn.style.color = "#fff";
+                isWatching[btnId] = false;
             });
         }
-    };
-
-    // অ্যাপে ফিরে আসা (ফোকাস পাওয়া) মাত্রই এই চেকটা হবে
-    window.addEventListener('focus', onReturnCheck);
-}
+    }
+} 
         // বাকি ফাংশনগুলো
         function submitWithdraw() {
     const method = document.getElementById('w-method').value; // পদ্ধতি ধরার জন্য

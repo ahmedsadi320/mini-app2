@@ -330,82 +330,80 @@ const db = firebase.database();
         function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
 
-    // --- ১. টেলিগ্রাম জয়েন টাস্কের জন্য লজিক ---
+    // --- ১. টেলিগ্রাম জয়েন টাস্কের লজিক ---
     if (btnId === 'join-btn') {
         const joinBtn = document.getElementById('join-btn');
         
-        // চেক করুন ইউজার আগে এই বোনাস নিয়েছে কি না (একবারই পাবে)
         uRef.once('value').then(s => {
             const d = s.val() || {};
             const completedTasks = d.completedTasks || {};
             
             if (completedTasks['telegram_joined']) {
-                joinBtn.innerText = "Already Claimed✅";
-                joinBtn.disabled = true;
+                tg.showAlert("আপনি এটি আগেই ক্লেইম করেছেন!");
                 return;
             }
 
-            // যদি না নিয়ে থাকে, তবে লিঙ্কে পাঠাবে
-            tg.openTelegramLink(link); // টেলিগ্রাম লিঙ্ক ওপেন করার সঠিক পদ্ধতি
+            tg.openTelegramLink(link); // টেলিগ্রাম লিঙ্ক ওপেন
             
             joinBtn.innerText = "Verifying...";
             joinBtn.style.pointerEvents = "none";
 
-            // ৫ সেকেন্ড পর অটো বোনাস ক্লেইম হবে (টেলিগ্রাম সরাসরি ভেরিফাই করা যায় না API ছাড়া)
             setTimeout(() => {
-                const currentBal = d.balance || 0;
                 completedTasks['telegram_joined'] = true;
-                
                 uRef.update({
-                    balance: currentBal + amount,
+                    balance: (d.balance || 0) + amount,
                     completedTasks: completedTasks
                 }).then(() => {
-                    tg.showAlert(`Channel join bonus claimed✅`);
+                    tg.showAlert(`টেলিগ্রাম বোনাস যোগ হয়েছে ✅`);
                     joinBtn.innerText = "Claimed ✅";
                     joinBtn.style.background = "#28a745";
                 });
             }, 5000);
         });
-        return; // টেলিগ্রাম টাস্ক হলে এখানেই শেষ, নিচের অ্যাড লজিক কাজ করবে না
+        return; 
     }
 
-    // --- ২. বিজ্ঞাপন (Ad) টাস্কের জন্য লজিক ---
+    // --- ২. স্মার্ট লিঙ্ক / Adsterra টাস্কের লজিক ---
     const btnNum = btnId.split('-')[1]; 
     const btn = document.getElementById(`ad-btn-${btnNum}`);
-    
-    if (btn) {
-        btn.innerText = "Loading Ad..."; 
-        btn.style.pointerEvents = "none";
-	}
+    const msg = document.getElementById(`msg-${btnId}`);
+
+    uRef.once('value').then(s => {
+        const d = s.val() || {};
+        const completedTasks = d.completedTasks || {};
+
+        if (completedTasks[btnId] === today) {
+            tg.showAlert("এই রিওয়ার্ডটি আজ নেওয়া হয়ে গেছে!");
+            return;
+        }
+
+        // ইউজারকে বিজ্ঞাপনের লিঙ্কে পাঠানো (টেলিগ্রাম ব্রাউজারে)
+        tg.openLink(link);
+
+        if (btn) {
+            btn.innerText = "Verifying..."; 
+            btn.style.pointerEvents = "none";
+        }
 
         // ১৫ সেকেন্ড পর ব্যালেন্স যোগ হবে
         setTimeout(() => {
-            uRef.once('value').then(s => {
-                const d = s.val() || {};
-                const completedTasks = d.completedTasks || {};
+            const currentBal = d.balance || 0;
+            const currentAds = d.adsWatched || 0;
+            completedTasks[btnId] = today;
 
-                if (completedTasks[btnId] !== today) {
-                    const currentBal = d.balance || 0;
-                    completedTasks[btnId] = today;
-                    uRef.update({
-                        balance: currentBal + amount,
-                        adsWatched: (d.adsWatched || 0) + 1,
-                        completedTasks: completedTasks
-                    }).then(() => {
-                        tg.showAlert(`Daily bonus claimed✅`);
-                    });
-                } else {
+            uRef.update({
+                balance: currentBal + amount,
+                adsWatched: currentAds + 1,
+                completedTasks: completedTasks
+            }).then(() => {
+                tg.showAlert(`সফলভাবে ${amount} টাকা যোগ হয়েছে! ✅`);
+                if (btn) {
+                    btn.innerText = "Finished ✅";
+                    btn.style.background = "#28a745";
                 }
+                if (msg) msg.innerText = "Daily bonus claimed✅";
             });
         }, 15000); 
-
-    }).catch(e => {
-        // অ্যাড লোড না হলে ব্যাকআপ লিঙ্কে পাঠানো
-        if (btn) {
-            btn.innerText = "Verify";
-            btn.style.pointerEvents = "auto";
-        }
-        window.open(link, '_blank');
     });
 		}
         

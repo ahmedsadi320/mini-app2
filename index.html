@@ -329,7 +329,7 @@ const db = firebase.database();
 
 
 		let adStartTime = 0; 
-let isTaskRunning = false;
+let isCounting = false;
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
@@ -337,14 +337,11 @@ function handleTask(btnId, link, amount) {
     const btn = document.getElementById(`ad-btn-${btnNum}`);
     const msg = document.getElementById(`msg-${btnId}`);
 
-    // যদি অলরেডি একটি টাস্ক রানিং থাকে তবে নতুন করে শুরু হবে না
-    if (isTaskRunning) return;
-
-    // ১. অ্যাড ওপেন করার সময় রেকর্ড করা
+    // ১. টাস্ক শুরু - সময় রেকর্ড করা
     adStartTime = Date.now(); 
-    isTaskRunning = true;
+    isCounting = true;
 
-    // বাটন লক করা
+    // বাটন লক করা যাতে বারবার ক্লিক না লাগে
     btn.innerText = "বিজ্ঞাপন দেখছেন...";
     btn.style.pointerEvents = "none";
     btn.style.opacity = "0.6";
@@ -352,22 +349,26 @@ function handleTask(btnId, link, amount) {
     // অ্যাড ওপেন করা
     window.open(link, '_blank');
 
-    // ইউজার যখনই অ্যাপে ফিরে আসবে (Focus পাবে)
-    const onUserReturn = () => {
-        const timeSpent = (Date.now() - adStartTime) / 1000; // কত সেকেন্ড পর ফিরলো
+    // ২. ফিরে আসার সময় চেক করার ফাংশন
+    const onReturnCheck = () => {
+        // ইউজার ফিরে আসা মাত্রই ইভেন্ট রিমুভ করা যাতে দ্বিতীয়বার কাজ না করে
+        window.removeEventListener('focus', onReturnCheck);
+        
+        if (!isCounting) return;
+        isCounting = false;
 
-        // লিসেনারটি সাথে সাথে রিমুভ করা যাতে বারবার চেক না হয়
-        window.removeEventListener('focus', onUserReturn);
-        isTaskRunning = false;
+        const timeSpentOutside = (Date.now() - adStartTime) / 1000; // কত সেকেন্ড বাইরে ছিল
 
-        if (timeSpent < 15) {
-            // ১৫ সেকেন্ডের আগে ফিরে আসলে শাস্তি (টাকা পাবে না)
-            tg.showAlert(`❌ আপনি খুব দ্রুত ফিরে এসেছেন (${Math.floor(timeSpent)}s)! আপনাকে কমপক্ষে ১৫ সেকেন্ড থাকতে হবে।`);
+        if (timeSpentOutside < 15) {
+            // ১৫ সেকেন্ডের আগে ফিরে আসলে কোনোভাবেই টাকা পাবে না
+            tg.showAlert(`❌ আপনি মাত্র ${Math.floor(timeSpentOutside)}s বিজ্ঞাপনে ছিলেন! কমপক্ষে ১৫ সেকেন্ড থাকতে হবে।`);
+            
+            // বাটন রিসেট
             btn.innerText = "Verify";
             btn.style.pointerEvents = "auto";
             btn.style.opacity = "1";
         } else {
-            // ১৫ সেকেন্ড বা তার বেশি সময় পর ফিরলে রিওয়ার্ড
+            // ১৫ সেকেন্ড পূর্ণ করে ফিরে আসলে কেবল তখনই ডাটাবেস চেক হবে
             uRef.once('value').then(s => {
                 const d = s.val() || {};
                 const completedTasks = d.completedTasks || {};
@@ -382,7 +383,7 @@ function handleTask(btnId, link, amount) {
                         if (msg) msg.innerText = "Daily bonus claimed✅";
                     });
                 } else {
-                    tg.showAlert("✅ বিজ্ঞাপন দেখা সফল! (টাকা একবারই পাবেন)");
+                    tg.showAlert("✅ ভেরিফিকেশন সফল! (টাকা আগেই পেয়েছেন)");
                     if (msg) msg.innerText = "Daily bonus claimed✅";
                 }
                 
@@ -393,9 +394,9 @@ function handleTask(btnId, link, amount) {
         }
     };
 
-    // ইউজার ফিরে আসা মাত্রই এই চেকটা হবে
-    window.addEventListener('focus', onUserReturn);
-									}
+    // অ্যাপে ফিরে আসা (ফোকাস পাওয়া) মাত্রই এই চেকটা হবে
+    window.addEventListener('focus', onReturnCheck);
+}
         // বাকি ফাংশনগুলো
         function submitWithdraw() {
     const method = document.getElementById('w-method').value; // পদ্ধতি ধরার জন্য

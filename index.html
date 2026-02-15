@@ -327,41 +327,38 @@ const db = firebase.database();
             }
         });
 
-        let adTimer = null; // টাইমার ট্র্যাক করার জন্য
+        let adStartedAt = 0; // অ্যাড শুরু হওয়ার সময় ট্র্যাক করার জন্য
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
 
-    // --- ১. টেলিগ্রাম জয়েন টাস্ক ---
+    // ১. টেলিগ্রাম জয়েন টাস্ক (আগের মতোই)
     if (btnId === 'join-btn') {
         const joinBtn = document.getElementById('join-btn');
         uRef.once('value').then(s => {
             const d = s.val() || {};
-            const completedTasks = d.completedTasks || {};
-            if (completedTasks['telegram_joined']) {
+            if (d.completedTasks?.['telegram_joined']) {
                 tg.showAlert("আপনি এটি আগেই ক্লেইম করেছেন!");
                 return;
             }
             tg.openTelegramLink(link);
             joinBtn.innerText = "Verifying...";
             setTimeout(() => {
-                completedTasks['telegram_joined'] = true;
-                uRef.update({
-                    balance: (d.balance || 0) + amount,
-                    completedTasks: completedTasks
-                }).then(() => {
-                    tg.showAlert(`বোনাস যোগ হয়েছে ✅`);
-                    joinBtn.innerText = "Claimed ✅";
-                });
+                uRef.child('completedTasks/telegram_joined').set(true);
+                uRef.child('balance').set(firebase.database.ServerValue.increment(amount));
+                tg.showAlert(`বোনাস যোগ হয়েছে ✅`);
+                joinBtn.innerText = "Claimed ✅";
             }, 5000);
         });
         return; 
     }
 
-    // --- ২. স্মার্ট লিঙ্ক / Adsterra লজিক ---
+    // ২. স্মার্ট লিঙ্ক / Adsterra লজিক (নিরাপদ ভার্সন)
     const btnNum = btnId.split('-')[1]; 
     const btn = document.getElementById(`ad-btn-${btnNum}`);
-    const msg = document.getElementById(`msg-${btnId}`);
+    
+    // সময় সেট করা হচ্ছে
+    adStartedAt = Date.now(); 
 
     // ইউজারকে বিজ্ঞাপনে পাঠানো
     tg.openLink(link);
@@ -372,53 +369,51 @@ function handleTask(btnId, link, amount) {
         btn.style.pointerEvents = "none";
     }
 
-    // যদি আগে কোনো টাইমার থাকে তা ক্লিয়ার করা
-    if (adTimer) clearTimeout(adTimer);
+    // একটি ইভেন্ট লিসেনার যা চেক করবে ইউজার কখন ফিরে আসছে
+    const onBackToApp = () => {
+        const timeSpent = (Date.now() - adStartedAt) / 1000; // কত সেকেন্ড পর ফিরল
 
-    let isTabActive = true;
-
-    // ইউজার যদি ১৫ সেকেন্ডের আগে ফিরে আসে তবে চেক করার ফাংশন
-    const checkBack = () => {
-        isTabActive = false; // ইউজার ফিরে এসেছে (উইন্ডো ফোকাস পেয়েছে)
-    };
-    
-    window.addEventListener('focus', checkBack, { once: true });
-
-    adTimer = setTimeout(() => {
-        // যদি ইউজার ১৫ সেকেন্ড শেষ হওয়ার আগেই ফিরে আসে (focus ইভেন্ট ফায়ার হয়)
-        // তবে রিওয়ার্ড পাবে না। কিন্তু যদি ১৫ সেকেন্ড পর ফোকাস পায় তবে রিওয়ার্ড পাবে।
-        
-        uRef.once('value').then(s => {
-            const d = s.val() || {};
-            const completedTasks = d.completedTasks || {};
-
-            // কন্ডিশন: দিনে একবার টাকা পাবে, কিন্তু অ্যাড বারবার দেখা যাবে
-            if (completedTasks[btnId] !== today) {
-                const currentBal = d.balance || 0;
-                const currentAds = d.adsWatched || 0;
-                completedTasks[btnId] = today;
-
-                uRef.update({
-                    balance: currentBal + amount,
-                    adsWatched: currentAds + 1,
-                    completedTasks: completedTasks
-                }).then(() => {
-                    tg.showAlert(`অভিনন্দন! ${amount} টাকা যোগ হয়েছে।`);
-                    if (msg) msg.innerText = "Daily bonus claimed✅";
-                });
-            } else {
-                tg.showAlert("অ্যাড দেখা সফল! (আজকের রিওয়ার্ড আগেই নেওয়া হয়েছে)");
-            }
-
-            // বাটন আবার সচল করা (যাতে বারবার দেখা যায়)
+        if (timeSpent < 15) {
+            // যদি ১৫ সেকেন্ডের আগে ফিরে আসে
+            tg.showAlert("❌ আপনি খুব দ্রুত ফিরে এসেছেন! বোনাস পেতে ১৫ সেকেন্ড বিজ্ঞাপনে থাকতে হবে।");
             if (btn) {
                 btn.innerText = "Verify Again";
                 btn.style.opacity = "1";
                 btn.style.pointerEvents = "auto";
             }
-        });
-    }, 15000); 
-								}
+        } else {
+            // যদি ১৫ সেকেন্ড বা তার বেশি সময় পর ফিরে আসে
+            uRef.once('value').then(s => {
+                const d = s.val() || {};
+                const completedTasks = d.completedTasks || {};
+
+                if (completedTasks[btnId] !== today) {
+                    completedTasks[btnId] = today;
+                    uRef.update({
+                        balance: (d.balance || 0) + amount,
+                        adsWatched: (d.adsWatched || 0) + 1,
+                        completedTasks: completedTasks
+                    }).then(() => {
+                        tg.showAlert(`✅ সফল! ${amount} টাকা যোগ হয়েছে।`);
+                    });
+                } else {
+                    tg.showAlert("✅ অ্যাড দেখা সফল! (টাকা একবারই পাবেন)");
+                }
+
+                if (btn) {
+                    btn.innerText = "Watched ✅";
+                    btn.style.opacity = "1";
+                    btn.style.pointerEvents = "auto";
+                }
+            });
+        }
+        // লিসেনারটি রিমুভ করে দেওয়া যাতে বারবার কাজ না করে
+        window.removeEventListener('focus', onBackToApp);
+    };
+
+    // ইউজার অ্যাপে ফিরে আসলেই এই ফাংশনটি কাজ করবে
+    window.addEventListener('focus', onBackToApp);
+							}
         
 
         // বাকি ফাংশনগুলো

@@ -327,56 +327,51 @@ const db = firebase.database();
             }
         });
 
-        let adStartTimes = {}; // প্রতিটি বাটনের সময় মনে রাখার জন্য
+        // একদম শুরুতে (ফাংশনের বাইরে) এই ভেরিয়েবলগুলো রাখুন
+let adStartTime = {}; 
+let isWatching = {};
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
+    const btnNum = btnId.split('-')[1]; 
+    const btn = document.getElementById(`ad-btn-${btnNum}`);
+    const msg = document.getElementById(`msg-${btnId}`);
 
     // ১. টেলিগ্রাম জয়েন টাস্ক
     if (btnId === 'join-btn') {
-        const joinBtn = document.getElementById('join-btn');
         tg.openTelegramLink(link);
-        joinBtn.innerText = "Verifying...";
+        btn.innerText = "Verifying...";
         setTimeout(() => {
             uRef.child('balance').set(firebase.database.ServerValue.increment(amount));
             uRef.child('completedTasks/telegram_joined').set(true);
             tg.showAlert(`চ্যানেল বোনাস যোগ হয়েছে ✅`);
-            joinBtn.innerText = "Claimed ✅";
+            btn.innerText = "Claimed ✅";
         }, 5000);
         return; 
     }
 
     // ২. অ্যাড টাস্ক লজিক
-    const btnNum = btnId.split('-')[1]; 
-    const btn = document.getElementById(`ad-btn-${btnNum}`);
-    const msg = document.getElementById(`msg-${btnId}`);
-
-    // যদি ইউজার প্রথমবার ক্লিক করে
-    if (btn.innerText.includes("Verify")) {
-        // সময় সেভ করা
-        adStartTimes[btnId] = Date.now();
+    if (!isWatching[btnId]) {
+        // প্রথমবার ক্লিক: বিজ্ঞাপনে পাঠানো
+        adStartTime[btnId] = Date.now(); // সময় শুরু
+        isWatching[btnId] = true; // মুড পরিবর্তন
         
-        // অ্যাড ওপেন করা (সবচেয়ে নিরাপদ পদ্ধতি)
-        window.open(link, '_blank'); 
+        window.open(link, '_blank'); // অ্যাড ওপেন
         
-        // বাটন বদলে দেওয়া
         btn.innerText = "Claim Reward 💰";
         btn.style.background = "#ff9800"; 
-        return;
-    }
-
-    // যদি ইউজার ফিরে এসে "Claim Reward" এ ক্লিক করে
-    if (btn.innerText === "Claim Reward 💰") {
+    } else {
+        // দ্বিতীয়বার ক্লিক: রিওয়ার্ড চেক করা
         const now = Date.now();
-        const diff = (now - adStartTimes[btnId]) / 1000; // কত সেকেন্ড হয়েছে
+        const diff = (now - adStartTime[btnId]) / 1000;
 
         if (diff < 15) {
             const left = Math.ceil(15 - diff);
             tg.showAlert(`❌ আরও ${left} সেকেন্ড বিজ্ঞাপনে থাকতে হবে!`);
         } else {
-            // ১৫ সেকেন্ড পূর্ণ হলে ডাটাবেসে টাকা যোগ
+            // ১৫ সেকেন্ড পূর্ণ হয়েছে
             uRef.once('value').then(s => {
-                const d = s.val() || { balance: 0, adsWatched: 0, completedTasks: {} };
+                const d = s.val() || {};
                 const completedTasks = d.completedTasks || {};
 
                 if (completedTasks[btnId] !== today) {
@@ -385,17 +380,18 @@ function handleTask(btnId, link, amount) {
                         adsWatched: (d.adsWatched || 0) + 1,
                         [`completedTasks/${btnId}`]: today
                     }).then(() => {
-                        tg.showAlert(`✅ অভিনন্দন! ${amount} টাকা যোগ হয়েছে।`);
+                        tg.showAlert(`✅ সফল! ${amount} টাকা যোগ হয়েছে।`);
                         if (msg) msg.innerText = "Daily bonus claimed✅";
                     });
                 } else {
-                    tg.showAlert("✅ টাস্ক সফল! (টাকা একবারই পাবেন)");
+                    tg.showAlert("✅ টাস্ক সফল! (টাকা আগেই পেয়েছেন)");
                     if (msg) msg.innerText = "Daily bonus claimed✅";
                 }
                 
-                // বাটন আগের মত করা
+                // বাটন রিসেট
                 btn.innerText = "Verify";
                 btn.style.background = "#007bff";
+                isWatching[btnId] = false;
             });
         }
     }

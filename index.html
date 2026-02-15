@@ -226,35 +226,38 @@ const db = firebase.database();
         const uId = user?.id || "guest_user";
         const uRef = db.ref('users/' + uId);
         let bal = 0;
-		// ১০০০% গ্যারান্টিড রেফারেল লজিক
-        const urlParams = new URLSearchParams(window.location.search);
-        let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
+		// ১০০০% গ্যারান্টিড রেফারেল লজিক (একই মোবাইলে ভিন্ন আইডির জন্য)
+const urlParams = new URLSearchParams(window.location.search);
+let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
 
-        // যদি রেফারেল আইডি না পাওয়া যায়, তবে ম্যানুয়ালি লিঙ্কের শেষ অংশ থেকে নেওয়ার চেষ্টা
-        if (!startParam) {
-            const fullUrl = window.location.href;
-            const match = fullUrl.match(/startapp=([a-zA-Z0-9_]+)/);
-            if (match) startParam = match[1];
-        }
-
-        uRef.once('value').then(snapshot => {
-            if (!snapshot.exists()) {
-                uRef.set({
-                    balance: 0, 
-                    referrals: 0, 
-                    adsWatched: 0, 
-                    last_reset_day: new Date().toDateString()
-                }).then(() => {
-                    if (startParam && String(startParam) !== String(uId)) {
-                        const inviterRef = db.ref('users/' + startParam);
+uRef.once('value').then(snapshot => {
+    if (!snapshot.exists()) {
+        // নতুন ইউজার হিসেবে রেজিস্ট্রি করা হচ্ছে
+        uRef.set({
+            balance: 0, 
+            referrals: 0, 
+            adsWatched: 0, 
+            last_reset_day: new Date().toDateString(),
+            completedTasks: {}
+        }).then(() => {
+            // যদি রেফারেল আইডি (startParam) থাকে এবং সেটি নিজের আইডি না হয়
+            if (startParam && String(startParam) !== String(uId)) {
+                const inviterRef = db.ref('users/' + startParam);
+                
+                // চেক করা হচ্ছে ইনভাইটার আসলে ডাটাবেসে আছে কি না
+                inviterRef.once('value').then(inviterSnap => {
+                    if (inviterSnap.exists()) {
                         inviterRef.update({
                             balance: firebase.database.ServerValue.increment(40),
                             referrals: firebase.database.ServerValue.increment(1)
                         });
+                        console.log("Referral bonus added to: " + startParam);
                     }
                 });
             }
         });
+    }
+});
 
         // আপনার অ্যাড লিঙ্কগুলো (এটি ফাংশনের বাইরে থাকতে হবে)
         const adLinks = [

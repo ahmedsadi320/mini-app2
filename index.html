@@ -327,8 +327,9 @@ const db = firebase.database();
             }
         });
 
-        let adTimer = null; // টাইমার ট্র্যাক করার জন্য
-let startTime = 0; // সময় ট্র্যাক করার জন্য
+
+		let adStartTime = 0; 
+let isTaskRunning = false;
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
@@ -336,71 +337,65 @@ function handleTask(btnId, link, amount) {
     const btn = document.getElementById(`ad-btn-${btnNum}`);
     const msg = document.getElementById(`msg-${btnId}`);
 
-    // আগে থেকেই করা থাকলে মেসেজ দেখাবে
-    uRef.once('value').then(s => {
-        const d = s.val() || {};
-        if (d.completedTasks && d.completedTasks[btnId] === today) {
-            // রিওয়ার্ড নিয়ে থাকলেও অ্যাড বারবার দেখা যাবে, কিন্তু টাকা একবারই পাবেন
-        }
-    });
+    // যদি অলরেডি একটি টাস্ক রানিং থাকে তবে নতুন করে শুরু হবে না
+    if (isTaskRunning) return;
 
-    // ১. অ্যাড ওপেন এবং টাইমার শুরু
-    startTime = Date.now();
-    window.open(link, '_blank'); // অ্যাড ওপেন
+    // ১. অ্যাড ওপেন করার সময় রেকর্ড করা
+    adStartTime = Date.now(); 
+    isTaskRunning = true;
 
+    // বাটন লক করা
     btn.innerText = "বিজ্ঞাপন দেখছেন...";
     btn.style.pointerEvents = "none";
-    btn.style.background = "#555";
+    btn.style.opacity = "0.6";
 
-    // ইউজার যদি ১৫ সেকেন্ডের আগে অ্যাপে ফিরে আসে তবে টাইমার বাতিল হবে
-    const verifyReturn = () => {
-        const timeSpent = (Date.now() - startTime) / 1000;
+    // অ্যাড ওপেন করা
+    window.open(link, '_blank');
+
+    // ইউজার যখনই অ্যাপে ফিরে আসবে (Focus পাবে)
+    const onUserReturn = () => {
+        const timeSpent = (Date.now() - adStartTime) / 1000; // কত সেকেন্ড পর ফিরলো
+
+        // লিসেনারটি সাথে সাথে রিমুভ করা যাতে বারবার চেক না হয়
+        window.removeEventListener('focus', onUserReturn);
+        isTaskRunning = false;
 
         if (timeSpent < 15) {
-            // ইউজার ১৫ সেকেন্ডের আগে ফিরে এসেছে
-            clearTimeout(adTimer); // টাইমার বন্ধ
-            tg.showAlert("❌ আপনি বিজ্ঞাপনটি সম্পূর্ণ দেখেননি! বোনাস পেতে ১৫ সেকেন্ড বিজ্ঞাপনে থাকতে হবে।");
-            btn.innerText = "আবার চেষ্টা করুন";
+            // ১৫ সেকেন্ডের আগে ফিরে আসলে শাস্তি (টাকা পাবে না)
+            tg.showAlert(`❌ আপনি খুব দ্রুত ফিরে এসেছেন (${Math.floor(timeSpent)}s)! আপনাকে কমপক্ষে ১৫ সেকেন্ড থাকতে হবে।`);
+            btn.innerText = "Verify";
             btn.style.pointerEvents = "auto";
-            btn.style.background = "#007bff";
-            window.removeEventListener('focus', verifyReturn);
+            btn.style.opacity = "1";
+        } else {
+            // ১৫ সেকেন্ড বা তার বেশি সময় পর ফিরলে রিওয়ার্ড
+            uRef.once('value').then(s => {
+                const d = s.val() || {};
+                const completedTasks = d.completedTasks || {};
+
+                if (completedTasks[btnId] !== today) {
+                    uRef.update({
+                        balance: (d.balance || 0) + amount,
+                        adsWatched: (d.adsWatched || 0) + 1,
+                        [`completedTasks/${btnId}`]: today
+                    }).then(() => {
+                        tg.showAlert(`✅ সফল! ১৫ সেকেন্ড থাকার জন্য ${amount} টাকা যোগ হয়েছে।`);
+                        if (msg) msg.innerText = "Daily bonus claimed✅";
+                    });
+                } else {
+                    tg.showAlert("✅ বিজ্ঞাপন দেখা সফল! (টাকা একবারই পাবেন)");
+                    if (msg) msg.innerText = "Daily bonus claimed✅";
+                }
+                
+                btn.innerText = "Verify";
+                btn.style.pointerEvents = "auto";
+                btn.style.opacity = "1";
+            });
         }
     };
 
-    // অ্যাপে ফিরে আসার ইভেন্ট লিসেনার
-    window.addEventListener('focus', verifyReturn);
-
-    // ১৫ সেকেন্ডের টাইমার
-    adTimer = setTimeout(() => {
-        // যদি ১৫ সেকেন্ড পূর্ণ হয় এবং ইউজার এখনো অ্যাপে ফিরে না আসে (অর্থাৎ সে এডে আছে)
-        // তবেই রিওয়ার্ড প্রসেস শুরু হবে।
-        
-        uRef.once('value').then(s => {
-            const d = s.val() || {};
-            const completedTasks = d.completedTasks || {};
-
-            if (completedTasks[btnId] !== today) {
-                uRef.update({
-                    balance: (d.balance || 0) + amount,
-                    adsWatched: (d.adsWatched || 0) + 1,
-                    [`completedTasks/${btnId}`]: today
-                }).then(() => {
-                    tg.showAlert(`✅ সফল! ১৫ সেকেন্ড বিজ্ঞাপন দেখার জন্য ${amount} টাকা যোগ হয়েছে।`);
-                    if (msg) msg.innerText = "Daily bonus claimed✅";
-                });
-            } else {
-                tg.showAlert("✅ বিজ্ঞাপন দেখা সফল! (টাকা আগেই পেয়েছেন)");
-                if (msg) msg.innerText = "Daily bonus claimed✅";
-            }
-
-            btn.innerText = "Verify";
-            btn.style.pointerEvents = "auto";
-            btn.style.background = "#007bff";
-            window.removeEventListener('focus', verifyReturn); // লিসেনার বন্ধ
-        });
-    }, 15000); 
-}
-
+    // ইউজার ফিরে আসা মাত্রই এই চেকটা হবে
+    window.addEventListener('focus', onUserReturn);
+									}
         // বাকি ফাংশনগুলো
         function submitWithdraw() {
     const method = document.getElementById('w-method').value; // পদ্ধতি ধরার জন্য

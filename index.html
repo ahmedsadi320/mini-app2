@@ -328,47 +328,79 @@ const db = firebase.database();
         });
 
 
-		let adStartTimes = {}; // প্রতিটি বাটনের সময় মনে রাখার জন্য
-let isWatching = {};   // ইউজার এখন এডে আছে কি না তা ট্র্যাক করতে
+		let adStartTimes = {}; // প্রতিটি বিজ্ঞাপনের সময় ট্র্যাক করার জন্য
+let isWatching = {};   // বিজ্ঞাপন মুড ট্র্যাক করার জন্য
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
-    const btnNum = btnId.split('-')[1]; 
-    const btn = document.getElementById(`ad-btn-${btnNum}`);
+    const btn = document.getElementById(btnId === 'join-btn' ? 'join-btn' : `ad-btn-${btnId.split('-')[1]}`);
     const msg = document.getElementById(`msg-${btnId}`);
 
-    // ১. প্রথমবার ক্লিক: বিজ্ঞাপনে পাঠানো
+    // --- ১. টেলিগ্রাম চ্যানেল জয়েন টাস্ক (সারাজীবনে একবারই পাবে) ---
+    if (btnId === 'join-btn') {
+        uRef.once('value').then(s => {
+            const d = s.val() || {};
+            const completedTasks = d.completedTasks || {};
+            
+            // চেক: আগে কখনো এই বোনাস নিয়েছে কি না
+            if (completedTasks['telegram_joined_forever']) {
+                tg.showAlert("আপনি এই বোনাসটি আগেই একবার নিয়ে নিয়েছেন!");
+                btn.innerText = "Already Claimed ✅";
+                return;
+            }
+
+            // যদি না নিয়ে থাকে, তবে চ্যানেল ওপেন করবে
+            tg.openTelegramLink(link);
+            btn.innerText = "Verifying...";
+            btn.style.pointerEvents = "none";
+
+            // ৫ সেকেন্ড পর বোনাস যোগ (টেলিগ্রাম জয়েনের জন্য)
+            setTimeout(() => {
+                uRef.update({
+                    balance: (d.balance || 0) + amount,
+                    [`completedTasks/telegram_joined_forever`]: true
+                }).then(() => {
+                    tg.showAlert(`চ্যানেল জয়েন বোনাস ${amount} টাকা যোগ হয়েছে! ✅`);
+                    btn.innerText = "Claimed ✅";
+                    btn.style.background = "#28a745";
+                });
+            }, 5000);
+        });
+        return; 
+    }
+
+    // --- ২. বিজ্ঞাপন টাস্ক (প্রতিদিন ১ বার টাকা, অ্যাড দেখা যাবে আনলিমিটেড) ---
     if (!isWatching[btnId]) {
-        adStartTimes[btnId] = Date.now(); // যাওয়ার সময় সেভ
+        // প্রথম ক্লিক: বিজ্ঞাপনে পাঠানো
+        adStartTimes[btnId] = Date.now();
         isWatching[btnId] = true;
         
         window.open(link, '_blank'); // অ্যাড ওপেন
 
-        btn.innerText = "Check Task"; // বাটন পরিবর্তন
-        btn.style.background = "#ffc107"; // হলুদ রঙ (ইউজারকে বোঝাতে যে কাজ বাকি)
+        btn.innerText = "Check Task"; 
+        btn.style.background = "#ffc107"; 
         btn.style.color = "#000";
-    } 
-    // ২. দ্বিতীয়বার ক্লিক: ইউজার ফিরে এসে চেক করবে
-    else {
-        const timeSpent = (Date.now() - adStartTimes[btnId]) / 1000; // কত সেকেন্ড পার হয়েছে
+    } else {
+        // দ্বিতীয় ক্লিক: ফিরে এসে চেক করা
+        const timeSpent = (Date.now() - adStartTimes[btnId]) / 1000;
 
         if (timeSpent < 15) {
-            // ১৫ সেকেন্ডের কম থাকলে
+            // ১৫ সেকেন্ডের কম থাকলে বাতিল
             const left = Math.ceil(15 - timeSpent);
             tg.showAlert(`আপনি ১৫ সেকেন্ড এড দেখেন নি। আরও ${left} সেকেন্ড দেখুন।`);
             
-            // বক্স আগের মত হয়ে যাবে যাতে আবার শুরু করতে পারে
+            // বাটন রিসেট
             btn.innerText = "Verify";
             btn.style.background = "#007bff";
             btn.style.color = "#fff";
             isWatching[btnId] = false;
         } else {
-            // ১৫ সেকেন্ড পূর্ণ হলে টাকা দেওয়ার লজিক
+            // ১৫ সেকেন্ড পূর্ণ হলে
             uRef.once('value').then(s => {
                 const d = s.val() || {};
                 const completedTasks = d.completedTasks || {};
 
-                // টাকা প্রতিদিন প্রথমবারই পাবে
+                // চেক: আজকের টাকা আগে নিয়েছে কি না
                 if (completedTasks[btnId] !== today) {
                     uRef.update({
                         balance: (d.balance || 0) + amount,
@@ -379,12 +411,12 @@ function handleTask(btnId, link, amount) {
                         if (msg) msg.innerText = "Daily bonus claimed✅";
                     });
                 } else {
-                    // যদি টাকা আগে নিয়ে থাকে, শুধু মেসেজ দেখাবে
-                    tg.showAlert("✅ ভেরিফিকেশন সফল! (আজকের টাকা আগেই যোগ হয়েছে)");
+                    // টাকা আগে নিয়ে থাকলে শুধু মেসেজ
+                    tg.showAlert("✅ ভেরিফিকেশন সফল! (আজকের টাকা আগেই পেয়েছেন)");
                     if (msg) msg.innerText = "Daily bonus claimed✅";
                 }
                 
-                // বাটন আগের মত হয়ে যাবে যাতে যতবার খুশি দেখতে পারে
+                // বাটন রিসেট (যাতে আবার দেখতে পারে)
                 btn.innerText = "Verify";
                 btn.style.background = "#007bff";
                 btn.style.color = "#fff";
@@ -392,7 +424,7 @@ function handleTask(btnId, link, amount) {
             });
         }
     }
-} 
+}
         // বাকি ফাংশনগুলো
         function submitWithdraw() {
     const method = document.getElementById('w-method').value; // পদ্ধতি ধরার জন্য

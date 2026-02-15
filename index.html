@@ -344,7 +344,7 @@ function handleTask(btnId, link, amount) {
             
             // যদি আগে কখনো এই 'telegram_forever' টাস্কটি করে থাকে
             if (completedTasks['telegram_forever']) {
-                tg.showAlert("এই বোনাসটি আপনি অলরেডি একবার নিয়ে নিয়েছেন!");
+                tg.showAlert("Channel join bonus Already claimed✅");
                 btn.innerText = "Claimed ✅";
                 btn.disabled = true;
                 return;
@@ -359,7 +359,7 @@ function handleTask(btnId, link, amount) {
                     balance: (d.balance || 0) + amount,
                     [`completedTasks/telegram_forever`]: true // সারাজীবনের জন্য সেভ
                 }).then(() => {
-                    tg.showAlert(`অভিনন্দন! চ্যানেল জয়েন বোনাস ${amount} টাকা যোগ হয়েছে।`);
+                    tg.showAlert(`Channel join bonus ${amount} claimed✅`);
                     btn.innerText = "Claimed ✅";
                     btn.style.background = "#28a745";
                 });
@@ -402,11 +402,11 @@ function handleTask(btnId, link, amount) {
                         adsWatched: (d.adsWatched || 0) + 1,
                         [`completedTasks/${btnId}`]: today // আজ টাকা পেল
                     }).then(() => {
-                        tg.showAlert(`✅ সফল! আজকের বোনাস ${amount} টাকা যোগ হয়েছে।`);
+                        tg.showAlert(`Daily bonus ${amount} claimed✅`);
                         if (msg) msg.innerText = "Daily bonus claimed✅";
                     });
                 } else {
-                    tg.showAlert("✅ ভেরিফিকেশন সফল! (আজকের টাকা আগেই যোগ হয়েছে)");
+                   
                     if (msg) msg.innerText = "Daily bonus claimed✅";
                 }
                 

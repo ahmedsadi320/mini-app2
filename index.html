@@ -327,7 +327,7 @@ const db = firebase.database();
             }
         });
 
-        let adStartedAt = 0; // অ্যাড শুরু হওয়ার সময় ট্র্যাক করার জন্য
+        let countdownInterval = null;
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
@@ -335,85 +335,83 @@ function handleTask(btnId, link, amount) {
     // ১. টেলিগ্রাম জয়েন টাস্ক (আগের মতোই)
     if (btnId === 'join-btn') {
         const joinBtn = document.getElementById('join-btn');
-        uRef.once('value').then(s => {
-            const d = s.val() || {};
-            if (d.completedTasks?.['telegram_joined']) {
-                tg.showAlert("আপনি এটি আগেই ক্লেইম করেছেন!");
-                return;
-            }
-            tg.openTelegramLink(link);
-            joinBtn.innerText = "Verifying...";
-            setTimeout(() => {
-                uRef.child('completedTasks/telegram_joined').set(true);
-                uRef.child('balance').set(firebase.database.ServerValue.increment(amount));
-                tg.showAlert(`বোনাস যোগ হয়েছে ✅`);
-                joinBtn.innerText = "Claimed ✅";
-            }, 5000);
-        });
+        tg.openTelegramLink(link);
+        joinBtn.innerText = "Verifying...";
+        setTimeout(() => {
+            uRef.child('completedTasks/telegram_joined').set(true);
+            uRef.child('balance').set(firebase.database.ServerValue.increment(amount));
+            tg.showAlert(`বোনাস যোগ হয়েছে ✅`);
+            joinBtn.innerText = "Claimed ✅";
+        }, 5000);
         return; 
     }
 
-    // ২. স্মার্ট লিঙ্ক / Adsterra লজিক (নিরাপদ ভার্সন)
+    // ২. অ্যাড টাস্ক লজিক উইথ টাইমার
     const btnNum = btnId.split('-')[1]; 
     const btn = document.getElementById(`ad-btn-${btnNum}`);
-    
-    // সময় সেট করা হচ্ছে
-    adStartedAt = Date.now(); 
+    const msg = document.getElementById(`msg-${btnId}`);
 
-    // ইউজারকে বিজ্ঞাপনে পাঠানো
-    tg.openLink(link);
+    let timeLeft = 15; // ১৫ সেকেন্ডের টাইমার
+    let isTaskCancelled = false;
 
-    if (btn) {
-        btn.innerText = "Watching...";
-        btn.style.opacity = "0.5";
-        btn.style.pointerEvents = "none";
-    }
-
-    // একটি ইভেন্ট লিসেনার যা চেক করবে ইউজার কখন ফিরে আসছে
-    const onBackToApp = () => {
-        const timeSpent = (Date.now() - adStartedAt) / 1000; // কত সেকেন্ড পর ফিরল
-
-        if (timeSpent < 15) {
-            // যদি ১৫ সেকেন্ডের আগে ফিরে আসে
-            tg.showAlert("❌ আপনি খুব দ্রুত ফিরে এসেছেন! বোনাস পেতে ১৫ সেকেন্ড বিজ্ঞাপনে থাকতে হবে।");
-            if (btn) {
-                btn.innerText = "Verify Again";
-                btn.style.opacity = "1";
-                btn.style.pointerEvents = "auto";
-            }
-        } else {
-            // যদি ১৫ সেকেন্ড বা তার বেশি সময় পর ফিরে আসে
-            uRef.once('value').then(s => {
-                const d = s.val() || {};
-                const completedTasks = d.completedTasks || {};
-
-                if (completedTasks[btnId] !== today) {
-                    completedTasks[btnId] = today;
-                    uRef.update({
-                        balance: (d.balance || 0) + amount,
-                        adsWatched: (d.adsWatched || 0) + 1,
-                        completedTasks: completedTasks
-                    }).then(() => {
-                        tg.showAlert(`✅ সফল! ${amount} টাকা যোগ হয়েছে।`);
-                    });
-                } else {
-                    tg.showAlert("✅ অ্যাড দেখা সফল! (টাকা একবারই পাবেন)");
-                }
-
-                if (btn) {
-                    btn.innerText = "Watched ✅";
-                    btn.style.opacity = "1";
-                    btn.style.pointerEvents = "auto";
-                }
-            });
+    // ইউজার অ্যাপে ফিরে এলে চেক করার ফাংশন
+    const checkStatusOnReturn = () => {
+        if (timeLeft > 0) {
+            isTaskCancelled = true;
+            clearInterval(countdownInterval);
+            tg.showAlert("❌ আপনি খুব দ্রুত ফিরে এসেছেন! ১৫ সেকেন্ড অপেক্ষা করুন।");
+            btn.innerText = "Verify Again";
+            btn.style.pointerEvents = "auto";
+            btn.style.background = "#007bff";
+            window.removeEventListener('focus', checkStatusOnReturn);
         }
-        // লিসেনারটি রিমুভ করে দেওয়া যাতে বারবার কাজ না করে
-        window.removeEventListener('focus', onBackToApp);
     };
 
-    // ইউজার অ্যাপে ফিরে আসলেই এই ফাংশনটি কাজ করবে
-    window.addEventListener('focus', onBackToApp);
-							}
+    // টাইমার শুরু
+    btn.style.pointerEvents = "none";
+    btn.style.background = "#444";
+    
+    // বিজ্ঞাপনের লিঙ্কে পাঠানো
+    tg.openLink(link);
+
+    // ইউজার ফিরে এলে ডিটেক্ট করা শুরু
+    window.addEventListener('focus', checkStatusOnReturn);
+
+    countdownInterval = setInterval(() => {
+        timeLeft--;
+        btn.innerText = `Wait ${timeLeft}s...`;
+
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            window.removeEventListener('focus', checkStatusOnReturn); // লিসেনার রিমুভ
+
+            if (!isTaskCancelled) {
+                uRef.once('value').then(s => {
+                    const d = s.val() || {};
+                    const completedTasks = d.completedTasks || {};
+
+                    if (completedTasks[btnId] !== today) {
+                        // টাকা যোগ করা
+                        uRef.update({
+                            balance: (d.balance || 0) + amount,
+                            adsWatched: (d.adsWatched || 0) + 1,
+                            [`completedTasks/${btnId}`]: today
+                        }).then(() => {
+                            tg.showAlert(`✅ অভিনন্দন! ${amount} টাকা যোগ হয়েছে।`);
+                        });
+                    } else {
+                        tg.showAlert("✅ অ্যাড দেখা সফল! (টাকা আগেই পেয়েছেন)");
+                    }
+
+                    btn.innerText = "Claimed ✅";
+                    btn.style.background = "#28a745";
+                    btn.style.pointerEvents = "auto";
+                    if (msg) msg.innerText = "Daily bonus claimed✅";
+                });
+            }
+        }
+    }, 1000);
+}
         
 
         // বাকি ফাংশনগুলো

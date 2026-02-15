@@ -327,12 +327,12 @@ const db = firebase.database();
             }
         });
 
-        let countdownInterval = null;
+        let countdownInterval = null; // গ্লোবাল টাইমার
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
 
-    // ১. টেলিগ্রাম জয়েন টাস্ক (আগের মতোই)
+    // ১. টেলিগ্রাম জয়েন টাস্ক
     if (btnId === 'join-btn') {
         const joinBtn = document.getElementById('join-btn');
         tg.openTelegramLink(link);
@@ -346,71 +346,72 @@ function handleTask(btnId, link, amount) {
         return; 
     }
 
-    // ২. অ্যাড টাস্ক লজিক উইথ টাইমার
+    // ২. অ্যাড টাস্ক লজিক
     const btnNum = btnId.split('-')[1]; 
     const btn = document.getElementById(`ad-btn-${btnNum}`);
     const msg = document.getElementById(`msg-${btnId}`);
 
-    let timeLeft = 15; // ১৫ সেকেন্ডের টাইমার
-    let isTaskCancelled = false;
+    let timeLeft = 15; 
+    let canClaim = false; // এটি নিশ্চিত করবে টাকা পাবে কি না
 
-    // ইউজার অ্যাপে ফিরে এলে চেক করার ফাংশন
-    const checkStatusOnReturn = () => {
-        if (timeLeft > 0) {
-            isTaskCancelled = true;
-            clearInterval(countdownInterval);
-            tg.showAlert("❌ আপনি খুব দ্রুত ফিরে এসেছেন! ১৫ সেকেন্ড অপেক্ষা করুন।");
-            btn.innerText = "Verify Again";
-            btn.style.pointerEvents = "auto";
-            btn.style.background = "#007bff";
-            window.removeEventListener('focus', checkStatusOnReturn);
-        }
-    };
+    // যদি আগে কোনো টাইমার চলে তা বন্ধ করা
+    if (countdownInterval) clearInterval(countdownInterval);
 
-    // টাইমার শুরু
-    btn.style.pointerEvents = "none";
-    btn.style.background = "#444";
-    
-    // বিজ্ঞাপনের লিঙ্কে পাঠানো
+    // ইউজারকে বিজ্ঞাপনে পাঠানো
     tg.openLink(link);
 
-    // ইউজার ফিরে এলে ডিটেক্ট করা শুরু
-    window.addEventListener('focus', checkStatusOnReturn);
+    // বাটন আগের মতই থাকবে, শুধু টেক্সট পরিবর্তন হবে
+    btn.style.pointerEvents = "none";
+    btn.innerText = `অপেক্ষা করুন ${timeLeft}s`;
 
+    // টাইমার শুরু
     countdownInterval = setInterval(() => {
         timeLeft--;
-        btn.innerText = `Wait ${timeLeft}s...`;
+        btn.innerText = `অপেক্ষা করুন ${timeLeft}s`;
 
         if (timeLeft <= 0) {
             clearInterval(countdownInterval);
-            window.removeEventListener('focus', checkStatusOnReturn); // লিসেনার রিমুভ
-
-            if (!isTaskCancelled) {
-                uRef.once('value').then(s => {
-                    const d = s.val() || {};
-                    const completedTasks = d.completedTasks || {};
-
-                    if (completedTasks[btnId] !== today) {
-                        // টাকা যোগ করা
-                        uRef.update({
-                            balance: (d.balance || 0) + amount,
-                            adsWatched: (d.adsWatched || 0) + 1,
-                            [`completedTasks/${btnId}`]: today
-                        }).then(() => {
-                            tg.showAlert(`✅ অভিনন্দন! ${amount} টাকা যোগ হয়েছে।`);
-                        });
-                    } else {
-                        tg.showAlert("✅ অ্যাড দেখা সফল! (টাকা আগেই পেয়েছেন)");
-                    }
-
-                    btn.innerText = "Claimed ✅";
-                    btn.style.background = "#28a745";
-                    btn.style.pointerEvents = "auto";
-                    if (msg) msg.innerText = "Daily bonus claimed✅";
-                });
-            }
+            canClaim = true; // ১৫ সেকেন্ড পূর্ণ হলেই কেবল ট্রু হবে
+            btn.innerText = "Verify"; 
+            btn.style.pointerEvents = "auto";
         }
     }, 1000);
+
+    // ইউজার ফিরে এলে চেক করার কঠোর লজিক
+    const checkOnReturn = () => {
+        if (!canClaim) {
+            // ১৫ সেকেন্ডের আগে ফিরে আসলে টাইমার বন্ধ এবং বাটন রিসেট
+            clearInterval(countdownInterval);
+            tg.showAlert("❌ আপনি ১৫ সেকেন্ড পূর্ণ করেননি! আবার চেষ্টা করুন।");
+            btn.innerText = "Verify";
+            btn.style.pointerEvents = "auto";
+        } else {
+            // ১৫ সেকেন্ড পূর্ণ করে ফিরে আসলে ব্যালেন্স চেক
+            uRef.once('value').then(s => {
+                const d = s.val() || {};
+                const completedTasks = d.completedTasks || {};
+
+                if (completedTasks[btnId] !== today) {
+                    uRef.update({
+                        balance: (d.balance || 0) + amount,
+                        adsWatched: (d.adsWatched || 0) + 1,
+                        [`completedTasks/${btnId}`]: today
+                    }).then(() => {
+                        tg.showAlert(`✅ ${amount} টাকা যোগ হয়েছে।`);
+                        if (msg) msg.innerText = "Daily bonus claimed✅";
+                    });
+                } else {
+                    tg.showAlert("✅ টাস্ক সফল! (টাকা একবারই পাবেন)");
+                    if (msg) msg.innerText = "Daily bonus claimed✅";
+                }
+            });
+        }
+        // লিসেনার রিমুভ যাতে বারবার ফায়ার না হয়
+        window.removeEventListener('focus', checkOnReturn);
+    };
+
+    // ইউজার অ্যাপে ফিরে আসা মাত্রই চেক হবে
+    window.addEventListener('focus', checkOnReturn);
 }
         
 

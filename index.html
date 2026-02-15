@@ -327,7 +327,7 @@ const db = firebase.database();
             }
         });
 
-        let adClickTime = 0; // গ্লোবাল ভেরিয়েবল
+        let adStartTime = {}; // প্রতিটি বাটনের জন্য আলাদা সময় ট্র্যাক করতে
 
 function handleTask(btnId, link, amount) {
     const today = new Date().toDateString();
@@ -351,59 +351,51 @@ function handleTask(btnId, link, amount) {
     const btn = document.getElementById(`ad-btn-${btnNum}`);
     const msg = document.getElementById(`msg-${btnId}`);
 
-    // বর্তমান সময় সেভ করা (মিলি-সেকেন্ডে)
-    adClickTime = Date.now();
+    // যদি ইউজার প্রথমবার ক্লিক করে (অ্যাড দেখতে যাওয়ার জন্য)
+    if (btn.innerText === "Verify" || btn.innerText === "Verify Again") {
+        adStartTime[btnId] = Date.now(); // ক্লিক করার সময় সেভ
+        tg.openLink(link); // বিজ্ঞাপনে পাঠানো
+        
+        btn.innerText = "Claim Reward 💰"; // বাটন পরিবর্তন
+        btn.style.background = "#ff9800"; // রঙ পরিবর্তন যাতে ইউজার বুঝে এখানে চাপ দিতে হবে
+        return;
+    }
 
-    // বিজ্ঞাপনের লিঙ্কে পাঠানো
-    tg.openLink(link);
-
-    // বাটন টেক্সট আপডেট
-    btn.innerText = "চেক করা হচ্ছে...";
-    btn.style.pointerEvents = "none";
-
-    // ইউজার যখন অ্যাপে ফিরে আসবে
-    const checkOnReturn = () => {
-        const currentTime = Date.now();
-        const timePassed = (currentTime - adClickTime) / 1000; // কত সেকেন্ড পার হয়েছে
+    // যদি ইউজার ফিরে এসে "Claim Reward" বাটনে চাপ দেয়
+    if (btn.innerText === "Claim Reward 💰") {
+        const timePassed = (Date.now() - adStartTime[btnId]) / 1000;
 
         if (timePassed < 15) {
-            // ১৫ সেকেন্ডের কম সময় হলে রিওয়ার্ড বাতিল
-            tg.showAlert(`❌ আপনি মাত্র ${Math.floor(timePassed)} সেকেন্ড ছিলেন। কমপক্ষে ১৫ সেকেন্ড থাকতে হবে!`);
-            btn.innerText = "Verify";
-            btn.style.pointerEvents = "auto";
+            // ১৫ সেকেন্ডের কম হলে
+            const remaining = Math.ceil(15 - timePassed);
+            tg.showAlert(`❌ আরও ${remaining} সেকেন্ড বিজ্ঞাপনে থাকতে হবে!`);
         } else {
-            // ১৫ সেকেন্ড পূর্ণ হলে ডাটাবেস চেক
+            // ১৫ সেকেন্ড পূর্ণ হলে
             uRef.once('value').then(s => {
                 const d = s.val() || {};
                 const completedTasks = d.completedTasks || {};
 
                 if (completedTasks[btnId] !== today) {
-                    // টাকা যোগ করা
                     uRef.update({
                         balance: (d.balance || 0) + amount,
                         adsWatched: (d.adsWatched || 0) + 1,
                         [`completedTasks/${btnId}`]: today
                     }).then(() => {
-                        tg.showAlert(`✅ সফল! ${amount} টাকা আপনার ব্যালেন্সে যোগ হয়েছে।`);
+                        tg.showAlert(`✅ সফল! ${amount} টাকা যোগ হয়েছে।`);
                         if (msg) msg.innerText = "Daily bonus claimed✅";
                     });
                 } else {
-                    tg.showAlert("✅ ভেরিফিকেশন সফল! (টাকা আগেই পেয়েছেন)");
+                    tg.showAlert("✅ টাস্ক সফল! (টাকা আগেই পেয়েছেন)");
                     if (msg) msg.innerText = "Daily bonus claimed✅";
                 }
                 
+                // বাটন আগের অবস্থায় ফিরিয়ে নেওয়া
                 btn.innerText = "Verify";
-                btn.style.pointerEvents = "auto";
+                btn.style.background = "#007bff";
             });
         }
-        // ফিরে আসার পর লিসেনার বন্ধ করা
-        window.removeEventListener('focus', checkOnReturn);
-    };
-
-    // ইউজার ফিরে আসা মাত্রই টাইমার চেক হবে
-    window.addEventListener('focus', checkOnReturn);
-}
-        
+    }
+			}
 
         // বাকি ফাংশনগুলো
         function submitWithdraw() {

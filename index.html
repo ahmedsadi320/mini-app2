@@ -228,7 +228,11 @@ const db = firebase.database();
         let bal = 0;
 		// রেফারেল আইডি ধরার মাস্টার কোড
 const urlParams = new URLSearchParams(window.location.search);
-let startParam = urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
+// সব উৎস থেকে প্যারামিটার চেক করা
+let startParam = tg.initDataUnsafe?.start_param || 
+                 urlParams.get('tgWebAppStartParam') || 
+                 urlParams.get('startapp') || 
+                 urlParams.get('start');
 
 // যদি সরাসরি না পায়, তবে ইউআরএল স্ট্রিং থেকে বের করবে
 if (!startParam) {

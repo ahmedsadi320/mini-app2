@@ -14,26 +14,35 @@
         .active-page { display: block !important; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* Header & UI */
         .header { display: flex; align-items: center; gap: 12px; padding: 25px 20px; }
         .u-avatar { width: 60px; height: 60px; border-radius: 50%; border: 2px solid #3b82f6; padding: 2px; }
         .u-name-text { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 5px; }
         .balance-badge { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 4px 12px; border-radius: 20px; font-size: 13px; border: 1px solid #3b82f6; display: inline-block; margin-top: 5px; }
 
+        /* Stats & Cards */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .stat-box { background: #161b22; border: 1px solid #30363d; border-radius: 15px; padding: 20px; text-align: center; }
+        .stat-box p { font-size: 11px; color: #8b949e; margin-bottom: 8px; }
         .stat-box h2 { font-size: 24px; color: #3b82f6; }
 
         .card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 25px; margin-bottom: 20px; text-align: center; }
-        .btn-blue { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-blue { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
         .btn-green { background: #28a745; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         
         .ad-card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; }
-        .btn-verify { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
+        .ad-icon { font-size: 40px; color: #3b82f6; margin-bottom: 10px; display: block; }
+        
+        /* Support Page */
+        .supp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .supp-card { background: #1c2128; border: 1px solid #30363d; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; }
+        .supp-card i { font-size: 22px; color: #3b82f6; display: block; margin-bottom: 5px; }
 
+        /* Nav Bar */
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: #161b22; border-top: 1px solid #30363d; display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
         .nav-item { color: #8b949e; text-align: center; font-size: 11px; flex: 1; border: none; background: none; cursor: pointer; }
         .nav-item.active { color: #3b82f6; }
-        .nav-item i { display: block; font-size: 22px; margin-bottom: 4px; }
+        .nav-item i { display: block; font-size: 22px; margin-bottom: 4px; font-style: normal; }
     </style>
 </head>
 <body>
@@ -49,12 +58,26 @@
     <div id="home" class="page active-page">
         <div class="stats-grid">
             <div class="stat-box"><p>Daily Ads</p><h2 id="u-ads">0 / 10</h2></div>
-            <div class="stat-box"><p>Referrals</p><h2 id="u-ref">0</h2></div>
+            <div class="stat-box"><p>Total Referrals</p><h2 id="u-ref">0</h2></div>
         </div>
         <div class="card">
-            <h3>Refer & Earn</h3>
-            <div id="ref-url" style="background:#0d1117; padding:12px; border-radius:10px; border:1px dashed #30363d; font-size:11px; color:#58a6ff; margin:15px 0; word-break:break-all;">Loading...</div>
-            <button onclick="copyRef()" class="btn-blue">Copy Link</button>
+            <h3>𝐑𝐞𝐟𝐞𝐫 & 𝐄𝐚𝐫𝐧</h3>
+            <p>প্রতি রেফারে আয় ৪০ টাকা। লিঙ্ক শেয়ার করুন।</p>
+            <div id="ref-url" style="background:#0d1117; padding:12px; border-radius:10px; border:1px dashed #30363d; font-size:10px; color:#58a6ff; margin:15px 0; word-break:break-all;">Loading Link...</div>
+            <button onclick="copyRef()" class="btn-blue">Copy Referral Link</button>
+        </div>
+    </div>
+
+    <div id="support" class="page">
+        <h2 style="margin-bottom:15px;">🎧 Support</h2>
+        <div class="card">
+            <div style="font-size: 40px;">▶️</div>
+            <h3>𝐓𝐮𝐭𝐨𝐫𝐢𝐚𝐥 𝐕𝐢𝐝𝐞𝐨</h3>
+            <button onclick="window.open('https://t.me/fojik_earn/17')" class="btn-blue">Open Tutorial</button>
+        </div>
+        <div class="supp-grid">
+            <div class="supp-card" onclick="window.open('https://t.me/fojiksupport')"><i>✈️</i><span>Telegram</span></div>
+            <div class="supp-card" onclick="window.open('https://t.me/fojiklive_chat')"><i>💬</i><span>Live Chat</span></div>
         </div>
     </div>
 
@@ -62,22 +85,24 @@
         <h2 style="margin-bottom:15px;">Tasks</h2>
         <div id="ad-list"></div>
         <div class="card">
-            <h3>Join Telegram Channel</h3>
-            <button id="join-btn" onclick="handleTask('join-btn', 'https://t.me/fojik_earn', 30)" class="btn-blue">Join & Claim 30 TK</button>
+            <h3>Join Channel</h3>
+            <p>বোনাস ৩০ টাকা পাবেন।</p>
+            <button id="join-btn" onclick="handleTask('join-btn', 'https://t.me/fojik_earn', 30)" class="btn-blue">Join & Claim</button>
         </div>
     </div>
 
     <div id="withdraw" class="page">
-        <h2 style="margin-bottom:15px;">Withdraw</h2>
+        <h2 style="margin-bottom:15px;">💰 Withdraw</h2>
         <div class="card">
-            <input type="text" id="w-number" class="btn-blue" style="background:#0d1117; margin-bottom:10px; text-align:left;" placeholder="Account Number">
-            <input type="number" id="w-amount" class="btn-blue" style="background:#0d1117; margin-bottom:10px; text-align:left;" placeholder="Amount (Min 800)">
-            <button onclick="submitWithdraw()" class="btn-green">Submit Request</button>
+            <input type="text" id="w-number" class="btn-blue" style="background:#0d1117; margin-bottom:10px; text-align:left; padding:15px;" placeholder="Number">
+            <input type="number" id="w-amount" class="btn-blue" style="background:#0d1117; margin-bottom:15px; text-align:left; padding:15px;" placeholder="Min 800 TK">
+            <button onclick="submitWithdraw()" class="btn-green">🚀 Submit Request</button>
         </div>
     </div>
 
     <nav class="nav-bar">
         <button class="nav-item active" onclick="nav('home', this)"><i>🏠</i>Home</button>
+        <button class="nav-item" onclick="nav('support', this)"><i>🎧</i>Support</button>
         <button class="nav-item" onclick="nav('tasks', this)"><i>📋</i>Tasks</button>
         <button class="nav-item" onclick="nav('withdraw', this)"><i>💰</i>Withdraw</button>
     </nav>
@@ -85,51 +110,63 @@
     <script>
         const SUPABASE_URL = 'https://sncrzqpvanxcylgnhete.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_oJoB60Pmqs5nnFck1zud6A_vfOigadl';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const tg = window.Telegram.WebApp;
         tg.ready();
         const user = tg.initDataUnsafe?.user;
         const uId = user?.id ? String(user.id) : "guest_user";
-        let userDataLocal = null;
+        let localData = null;
 
-        function nav(pageId, element) {
+        function nav(id, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-            document.getElementById(pageId).classList.add('active-page');
+            document.getElementById(id).classList.add('active-page');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            element.classList.add('active');
+            el.classList.add('active');
         }
 
         async function initApp() {
             document.getElementById('u-name').innerHTML = (user?.first_name || "User") + ' <span style="color:#3b82f6">✔️</span>';
             document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
+            if (user?.photo_url) document.getElementById('user-photo').src = user.photo_url;
 
             const today = new Date().toDateString();
-            const { data, error } = await supabaseClient.from('users').select('*').eq('id', uId).maybeSingle();
+            let { data } = await supabase.from('users').select('*').eq('id', uId).maybeSingle();
 
             if (!data) {
-                const startParam = tg.initDataUnsafe?.start_param || "";
-                const newUser = { id: uId, balance: 0, referrals: 0, ads_watched: 0, last_reset_day: today, completed_tasks: {} };
-                await supabaseClient.from('users').insert([newUser]);
-                userDataLocal = newUser;
-            } else {
-                userDataLocal = data;
-                if (data.last_reset_day !== today) {
-                    await supabaseClient.from('users').update({ ads_watched: 0, last_reset_day: today }).eq('id', uId);
-                    userDataLocal.ads_watched = 0;
+                // নতুন ইউজার এবং রেফারেল চেক
+                const startParam = tg.initDataUnsafe?.start_param;
+                data = { id: uId, balance: 0, referrals: 0, ads_watched: 0, last_reset_day: today, completed_tasks: {} };
+                
+                await supabase.from('users').insert([data]);
+
+                // যদি কেউ রেফারেল লিঙ্কে আসে
+                if (startParam && startParam !== uId) {
+                    const { data: inviter } = await supabase.from('users').select('*').eq('id', startParam).single();
+                    if (inviter) {
+                        await supabase.from('users').update({ 
+                            balance: inviter.balance + 40, 
+                            referrals: inviter.referrals + 1 
+                        }).eq('id', startParam);
+                    }
                 }
+            } else if (data.last_reset_day !== today) {
+                await supabase.from('users').update({ ads_watched: 0, last_reset_day: today }).eq('id', uId);
+                data.ads_watched = 0;
             }
+
+            localData = data;
             updateUI();
             renderAds();
         }
 
         function updateUI() {
-            document.getElementById('u-balance').innerText = (userDataLocal.balance || 0).toFixed(2);
-            document.getElementById('u-ref').innerText = userDataLocal.referrals || 0;
-            document.getElementById('u-ads').innerText = (userDataLocal.ads_watched || 0) + " / 10";
-            if(userDataLocal.completed_tasks['telegram_forever']) {
-                document.getElementById('join-btn').innerText = "Claimed ✅";
-                document.getElementById('join-btn').disabled = true;
+            document.getElementById('u-balance').innerText = (localData.balance || 0).toFixed(2);
+            document.getElementById('u-ref').innerText = localData.referrals || 0;
+            document.getElementById('u-ads').innerText = (localData.ads_watched || 0) + " / 10";
+            if (localData.completed_tasks['join-btn']) {
+                const jBtn = document.getElementById('join-btn');
+                jBtn.innerText = "Claimed ✅"; jBtn.disabled = true; jBtn.style.background = "#28a745";
             }
         }
 
@@ -137,41 +174,41 @@
 
         function renderAds() {
             const adList = document.getElementById('ad-list');
+            const today = new Date().toDateString();
             adList.innerHTML = "";
             for (let i = 1; i <= 9; i++) {
-                const isDone = userDataLocal.completed_tasks[`ad-${i}`] === new Date().toDateString();
+                const isDone = localData.completed_tasks[`ad-${i}`] === today;
                 adList.innerHTML += `
                 <div class="ad-card">
+                    <i class="ad-icon">📹</i>
                     <h3>Ad #${i}</h3>
                     <button onclick="handleTask('ad-${i}', '${adLinks[i%2]}', 10)" class="btn-verify">${isDone ? "Done ✅" : "Verify"}</button>
                 </div>`;
             }
         }
 
-        let adTimer = {};
+        let timers = {};
         async function handleTask(id, link, amt) {
-            if (!adTimer[id]) {
-                adTimer[id] = Date.now();
+            if (!timers[id]) {
+                timers[id] = Date.now();
                 window.open(link, '_blank');
-                tg.showAlert("Stay 15 seconds then click Verify again!");
+                tg.showAlert("১৫ সেকেন্ড থাকুন, তারপর আবার ক্লিক করুন।");
             } else {
-                if ((Date.now() - adTimer[id]) < 15000) return tg.showAlert("Wait 15 seconds!");
+                if ((Date.now() - timers[id]) < 15000) return tg.showAlert("আরও কিছুক্ষণ অপেক্ষা করুন!");
                 
-                const taskKey = id === 'join-btn' ? 'telegram_forever' : id;
                 const today = new Date().toDateString();
+                if (localData.completed_tasks[id] !== (id === 'join-btn' ? true : today)) {
+                    localData.balance += amt;
+                    localData.completed_tasks[id] = (id === 'join-btn' ? true : today);
+                    if (id !== 'join-btn') localData.ads_watched++;
 
-                if (userDataLocal.completed_tasks[taskKey] !== (taskKey === 'telegram_forever' ? true : today)) {
-                    userDataLocal.balance += amt;
-                    userDataLocal.completed_tasks[taskKey] = (taskKey === 'telegram_forever' ? true : today);
-                    if(id !== 'join-btn') userDataLocal.ads_watched += 1;
-                    
-                    await supabaseClient.from('users').update({ 
-                        balance: userDataLocal.balance, 
-                        ads_watched: userDataLocal.ads_watched, 
-                        completed_tasks: userDataLocal.completed_tasks 
+                    await supabase.from('users').update({ 
+                        balance: localData.balance, 
+                        ads_watched: localData.ads_watched, 
+                        completed_tasks: localData.completed_tasks 
                     }).eq('id', uId);
                     
-                    tg.showAlert("Reward Added!");
+                    tg.showAlert("পেমেন্ট সফল! ✅");
                     updateUI();
                     renderAds();
                 }
@@ -180,13 +217,13 @@
 
         async function submitWithdraw() {
             const amt = parseFloat(document.getElementById('w-amount').value);
-            if (userDataLocal.balance < 800 || amt < 800) return tg.showAlert("Min 800 TK needed!");
-            await supabaseClient.from('users').update({ balance: userDataLocal.balance - amt }).eq('id', uId);
-            tg.showAlert("Request Submitted!");
+            if (localData.balance < 800 || amt < 800) return tg.showAlert("মিনিমাম ৮০০ টাকা লাগবে!");
+            await supabase.from('users').update({ balance: localData.balance - amt }).eq('id', uId);
+            tg.showAlert("উত্তোলন সফল! ✅");
             location.reload();
         }
 
-        function copyRef() { navigator.clipboard.writeText(document.getElementById('ref-url').innerText); tg.showAlert("Copied!"); }
+        function copyRef() { navigator.clipboard.writeText(document.getElementById('ref-url').innerText); tg.showAlert("লিঙ্ক কপি হয়েছে!"); }
 
         initApp();
     </script>

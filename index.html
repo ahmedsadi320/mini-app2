@@ -230,59 +230,73 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
         const tg = window.Telegram.WebApp;
+tg.ready(); // এটি নিশ্চিত করবে টেলিগ্রাম পুরোপুরি লোড হয়েছে
 tg.expand();
 
 const user = tg.initDataUnsafe?.user;
 const uId = user?.id ? String(user.id) : "guest_user";
 const uRef = db.ref('users/' + uId);
 
-// ১. রেফারেল আইডি সঠিকভাবে সংগ্রহ করা
-let startParam = "";
-if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-    startParam = String(tg.initDataUnsafe.start_param);
+// ১. সঠিক নিয়মে রেফারেল প্যারামিটার ধরা (Timeout সহ)
+function getStartParam() {
+    return new Promise((resolve) => {
+        // একটু অপেক্ষা করা যাতে টেলিগ্রাম ডেটা পাঠাতে পারে
+        setTimeout(() => {
+            let param = tg.initDataUnsafe?.start_param || "";
+            if (!param) {
+                const urlParams = new URLSearchParams(window.location.search);
+                param = urlParams.get('tgWebAppStartParam') || "";
+            }
+            resolve(String(param));
+        }, 500); // ৫০০ মিলি-সেকেন্ড বিরতি
+    });
 }
 
-// ২. মেইন ফাংশন
-uRef.once('value').then(snapshot => {
+// ২. মেইন লজিক রান করা
+async function initApp() {
+    const startParam = await getStartParam();
+    const snapshot = await uRef.once('value');
     const today = new Date().toDateString();
-    
+
     if (!snapshot.exists()) {
-        // নতুন ইউজার ডাটাবেসে সেভ করা
-        const userData = {
+        // নতুন ইউজার ডাটা
+        const newUser = {
             balance: 0,
             referrals: 0,
             adsWatched: 0,
             last_reset_day: today,
-            referredBy: startParam || "none", // কার মাধ্যমে এল তা সেভ রাখা
+            referredBy: (startParam && startParam !== uId) ? startParam : "none",
             completedTasks: {}
         };
 
-        uRef.set(userData).then(() => {
-            // যদি ভ্যালিড রেফারেল থাকে এবং নিজের আইডিতে নিজে রেফার না করে
-            if (startParam && startParam !== uId && startParam !== "") {
-                const inviterRef = db.ref('users/' + startParam);
-                
-                inviterRef.once('value').then(inviterSnap => {
-                    if (inviterSnap.exists()) {
-                        // রেফারকারীর ব্যালেন্স ৪০ টাকা বাড়ানো
-                        inviterRef.update({
-                            balance: firebase.database.ServerValue.increment(40),
-                            referrals: firebase.database.ServerValue.increment(1)
-                        }).then(() => {
-                            console.log("Success: 40 Taka Bonus added to inviter: " + startParam);
-                        });
-                    }
-                });
-            }
-        });
+        await uRef.set(newUser);
+
+        // ৩. রেফারেল বোনাস লজিক (Transaction ব্যবহার করে)
+        if (startParam && startParam !== uId && startParam !== "") {
+            const inviterRef = db.ref('users/' + startParam);
+            
+            inviterRef.transaction((currentData) => {
+                if (currentData) {
+                    currentData.balance = (currentData.balance || 0) + 40;
+                    currentData.referrals = (currentData.referrals || 0) + 1;
+                }
+                return currentData;
+            }, (error, committed) => {
+                if (committed) {
+                    console.log("Bonus added to: " + startParam);
+                }
+            });
+        }
     } else {
-        // পুরনো ইউজার হলে ডেইলি অ্যাড লিমিট রিসেট
+        // পুরাতন ইউজার হলে লিমিট রিসেট
         const d = snapshot.val();
         if (d.last_reset_day !== today) {
             uRef.update({ adsWatched: 0, last_reset_day: today });
         }
     }
-});
+}
+
+initApp();
 
 // ২. তোমার অ্যাড লিঙ্কগুলো
 const adLinks = [

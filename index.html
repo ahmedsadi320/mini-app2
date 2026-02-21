@@ -219,84 +219,82 @@
     </nav>
 
     <script>
-        // আপনার নতুন fojikearn প্রোজেক্টের কনফিগ
-const firebaseConfig = { 
-    apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
-    databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
-    projectId: "fojikearn" 
-};
+    // আপনার আগের সব কোড (Firebase Config থেকে initApp পর্যন্ত) মুছে দিয়ে এটি বসান
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
+        databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
+        projectId: "fojikearn" 
+    };
 
-// ডাটাবেস ইনিশিয়ালাইজ করুন
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-        const tg = window.Telegram.WebApp;
-tg.ready(); // এটি নিশ্চিত করবে টেলিগ্রাম পুরোপুরি লোড হয়েছে
-tg.expand();
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-const user = tg.initDataUnsafe?.user;
-const uId = user?.id ? String(user.id) : "guest_user";
-const uRef = db.ref('users/' + uId);
+    const user = tg.initDataUnsafe?.user;
+    const uId = user?.id ? String(user.id) : "guest_user";
+    const uRef = db.ref('users/' + uId);
 
-// ১. সঠিক নিয়মে রেফারেল প্যারামিটার ধরা (Timeout সহ)
-function getStartParam() {
-    return new Promise((resolve) => {
-        // একটু অপেক্ষা করা যাতে টেলিগ্রাম ডেটা পাঠাতে পারে
-        setTimeout(() => {
-            let param = tg.initDataUnsafe?.start_param || "";
-            if (!param) {
-                const urlParams = new URLSearchParams(window.location.search);
-                param = urlParams.get('tgWebAppStartParam') || "";
-            }
-            resolve(String(param));
-        }, 500); // ৫০০ মিলি-সেকেন্ড বিরতি
-    });
-}
-
-// ২. মেইন লজিক রান করা
-async function initApp() {
-    const startParam = await getStartParam();
-    const snapshot = await uRef.once('value');
-    const today = new Date().toDateString();
-
-    if (!snapshot.exists()) {
-        // নতুন ইউজার ডাটা
-        const newUser = {
-            balance: 0,
-            referrals: 0,
-            adsWatched: 0,
-            last_reset_day: today,
-            referredBy: (startParam && startParam !== uId) ? startParam : "none",
-            completedTasks: {}
-        };
-
-        await uRef.set(newUser);
-
-        // ৩. রেফারেল বোনাস লজিক (Transaction ব্যবহার করে)
-        if (startParam && startParam !== uId && startParam !== "") {
-            const inviterRef = db.ref('users/' + startParam);
-            
-            inviterRef.transaction((currentData) => {
-                if (currentData) {
-                    currentData.balance = (currentData.balance || 0) + 40;
-                    currentData.referrals = (currentData.referrals || 0) + 1;
+    function getStartParam() {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                let param = tg.initDataUnsafe?.start_param || "";
+                if (!param) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    param = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || "";
                 }
-                return currentData;
-            }, (error, committed) => {
-                if (committed) {
-                    console.log("Bonus added to: " + startParam);
-                }
-            });
-        }
-    } else {
-        // পুরাতন ইউজার হলে লিমিট রিসেট
-        const d = snapshot.val();
-        if (d.last_reset_day !== today) {
-            uRef.update({ adsWatched: 0, last_reset_day: today });
-        }
+                resolve(String(param));
+            }, 700); 
+        });
     }
-}
 
-initApp();
+    async function initApp() {
+        const startParam = await getStartParam();
+        const snapshot = await uRef.once('value');
+        const today = new Date().toDateString();
+
+        if (!snapshot.exists()) {
+            const newUser = {
+                balance: 0,
+                referrals: 0,
+                adsWatched: 0,
+                last_reset_day: today,
+                referredBy: (startParam && startParam !== uId) ? startParam : "none",
+                completedTasks: {}
+            };
+            await uRef.set(newUser);
+
+            if (startParam && startParam !== uId && startParam !== "" && startParam !== "none") {
+                const inviterRef = db.ref('users/' + startParam);
+                inviterRef.transaction((currentData) => {
+                    if (currentData) {
+                        currentData.balance = (Number(currentData.balance) || 0) + 40;
+                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+                    }
+                    return currentData;
+                });
+            }
+        } else {
+            const d = snapshot.val();
+            if (d.last_reset_day !== today) {
+                uRef.update({ adsWatched: 0, last_reset_day: today });
+            }
+        }
+
+        // রিয়েল টাইম ডাটা আপডেট করার লিসেনার (UI এর জন্য)
+        uRef.on('value', (s) => {
+            const d = s.val() || {};
+            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
+            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+            if(document.getElementById('u-name')) document.getElementById('u-name').innerText = user?.first_name || "User";
+            if(document.getElementById('ref-url')) document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
+            if (user?.photo_url && document.getElementById('user-photo')) document.getElementById('user-photo').src = user.photo_url;
+        });
+    }
+
+    // সবশেষে ফাংশনটি অবশ্যই কল করবেন
+    initApp();
 
 // ২. তোমার অ্যাড লিঙ্কগুলো
 const adLinks = [

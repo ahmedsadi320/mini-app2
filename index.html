@@ -11,7 +11,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0d1117; color: white; padding-bottom: 90px; }
         .page { display: none; padding: 20px; animation: fadeIn 0.3s; }
-        .active-page { display: block; }
+        .active-page { display: block !important; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .header { display: flex; align-items: center; gap: 12px; padding: 25px 20px; }
@@ -21,27 +21,19 @@
 
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .stat-box { background: #161b22; border: 1px solid #30363d; border-radius: 15px; padding: 20px; text-align: center; }
-        .stat-box p { font-size: 11px; color: #8b949e; margin-bottom: 8px; }
         .stat-box h2 { font-size: 24px; color: #3b82f6; }
 
         .card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 25px; margin-bottom: 20px; text-align: center; }
         .btn-blue { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-green { background: #28a745; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
-        .btn-withdraw { background: linear-gradient(90deg, #f80759 0%, #bc4e9c 100%); color: white; border: none; padding: 16px; border-radius: 14px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; cursor: pointer; }
-
+        
         .ad-card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; }
-        .ad-icon { font-size: 50px; color: #3b82f6; margin-bottom: 10px; display: block; }
-        .btn-verify { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+        .btn-verify { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
 
-        .supp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .supp-card { background: #1c2128; border: 1px solid #30363d; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; }
-        .supp-card i { font-size: 24px; color: #3b82f6; display: block; margin-bottom: 8px; }
-
-        .w-input { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 10px; padding: 14px; color: white; outline: none; margin-bottom: 15px; font-size: 14px; }
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: #161b22; border-top: 1px solid #30363d; display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
         .nav-item { color: #8b949e; text-align: center; font-size: 11px; flex: 1; border: none; background: none; cursor: pointer; }
-        .nav-item i { display: block; font-size: 22px; margin-bottom: 4px; font-style: normal; }
         .nav-item.active { color: #3b82f6; }
+        .nav-item i { display: block; font-size: 22px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -56,60 +48,36 @@
 
     <div id="home" class="page active-page">
         <div class="stats-grid">
-            <div class="stat-box"><p>Daily Ads Watched</p><h2 id="u-ads">0 / 10</h2></div>
-            <div class="stat-box"><p>Total Referrals</p><h2 id="u-ref">0</h2></div>
+            <div class="stat-box"><p>Daily Ads</p><h2 id="u-ads">0 / 10</h2></div>
+            <div class="stat-box"><p>Referrals</p><h2 id="u-ref">0</h2></div>
         </div>
         <div class="card">
-            <h3>𝐑𝐞𝐟𝐞𝐫 & 𝐄𝐚𝐫𝐧 𝐌𝐨𝐫𝐞!</h3>
-            <p>প্রতি রেফারে আয় ৪০ টাকা। লিঙ্ক শেয়ার করুন।</p>
-            <div id="ref-url" style="background:#0d1117; padding:12px; border-radius:10px; border:1px dashed #30363d; font-size:10px; color:#58a6ff; margin-bottom:15px; word-break:break-all;">Loading Link...</div>
-            <div style="display:flex; gap:10px;">
-                <button onclick="copyRef()" class="btn-blue">Copy Referral Link</button>
-                <button onclick="shareRef()" class="btn-green">Share Now</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="support" class="page">
-        <h2 style="margin-bottom:15px;">🎧 Support</h2>
-        <div class="card">
-            <div style="font-size: 40px;">▶️</div>
-            <h3>𝐓𝐮𝐭𝐨𝐫𝐢𝐚𝐥 𝐕𝐢𝐝𝐞𝐨</h3>
-            <button onclick="window.open('https://t.me/fojik_earn/17')" class="btn-blue">Open Tutorial</button>
-        </div>
-        <div class="supp-grid">
-            <div class="supp-card" onclick="window.open('https://t.me/fojiksupport')"><i>✈️</i><span>Telegram</span></div>
-            <div class="supp-card" onclick="window.open('https://t.me/fojiklive_chat')"><i>💬</i><span>Live Chat</span></div>
+            <h3>Refer & Earn</h3>
+            <div id="ref-url" style="background:#0d1117; padding:12px; border-radius:10px; border:1px dashed #30363d; font-size:11px; color:#58a6ff; margin:15px 0; word-break:break-all;">Loading...</div>
+            <button onclick="copyRef()" class="btn-blue">Copy Link</button>
         </div>
     </div>
 
     <div id="tasks" class="page">
-        <h2 style="margin-bottom:15px;">Complete Tasks</h2>
+        <h2 style="margin-bottom:15px;">Tasks</h2>
         <div id="ad-list"></div>
         <div class="card">
-            <div style="background:#007bff; width:50px; height:50px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center;">✈️</div>
             <h3>Join Telegram Channel</h3>
-            <p>জয়েন করার জন্য ৩০ টাকা বোনাস পাবেন।</p>
-            <button id="join-btn" onclick="handleTask('join-btn', 'https://t.me/fojik_earn', 30)" class="btn-blue">Join & Claim</button>
+            <button id="join-btn" onclick="handleTask('join-btn', 'https://t.me/fojik_earn', 30)" class="btn-blue">Join & Claim 30 TK</button>
         </div>
     </div>
 
     <div id="withdraw" class="page">
-        <h2 style="margin-bottom:15px;">💰 Withdraw</h2>
-        <div class="card" style="text-align: left;">
-            <select id="w-method" class="w-input">
-                <option value="BKash">BKash</option>
-                <option value="Nagad">Nagad</option>
-            </select>
-            <input type="text" id="w-number" class="w-input" placeholder="Account Number">
-            <input type="number" id="w-amount" class="w-input" placeholder="Amount (Min 800)">
-            <button onclick="submitWithdraw()" class="btn-withdraw">🚀 Submit Request</button>
+        <h2 style="margin-bottom:15px;">Withdraw</h2>
+        <div class="card">
+            <input type="text" id="w-number" class="btn-blue" style="background:#0d1117; margin-bottom:10px; text-align:left;" placeholder="Account Number">
+            <input type="number" id="w-amount" class="btn-blue" style="background:#0d1117; margin-bottom:10px; text-align:left;" placeholder="Amount (Min 800)">
+            <button onclick="submitWithdraw()" class="btn-green">Submit Request</button>
         </div>
     </div>
 
     <nav class="nav-bar">
         <button class="nav-item active" onclick="nav('home', this)"><i>🏠</i>Home</button>
-        <button class="nav-item" onclick="nav('support', this)"><i>🎧</i>Support</button>
         <button class="nav-item" onclick="nav('tasks', this)"><i>📋</i>Tasks</button>
         <button class="nav-item" onclick="nav('withdraw', this)"><i>💰</i>Withdraw</button>
     </nav>
@@ -117,114 +85,108 @@
     <script>
         const SUPABASE_URL = 'https://sncrzqpvanxcylgnhete.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_oJoB60Pmqs5nnFck1zud6A_vfOigadl';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const tg = window.Telegram.WebApp;
         tg.ready();
         const user = tg.initDataUnsafe?.user;
         const uId = user?.id ? String(user.id) : "guest_user";
-        let bal = 0;
-        let adStartTimes = {};
+        let userDataLocal = null;
 
-        async function initApp() {
-            const today = new Date().toDateString();
-            const startParam = tg.initDataUnsafe?.start_param || "";
-
-            let { data: userData } = await supabase.from('users').select('*').eq('id', uId).maybeSingle();
-
-            if (!userData) {
-                userData = { id: uId, balance: 0, referrals: 0, ads_watched: 0, last_reset_day: today, referred_by: startParam || "none", completed_tasks: {} };
-                await supabase.from('users').insert([userData]);
-                if (startParam && startParam !== uId) {
-                    const { data: inviter } = await supabase.from('users').select('*').eq('id', startParam).single();
-                    if(inviter) await supabase.from('users').update({ balance: inviter.balance + 40, referrals: inviter.referrals + 1 }).eq('id', startParam);
-                }
-            } else if (userData.last_reset_day !== today) {
-                await supabase.from('users').update({ ads_watched: 0, last_reset_day: today }).eq('id', uId);
-                userData.ads_watched = 0;
-            }
-
-            updateUI(userData);
-            renderAds(userData.completed_tasks || {});
+        function nav(pageId, element) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+            document.getElementById(pageId).classList.add('active-page');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            element.classList.add('active');
         }
 
-        function updateUI(data) {
-            bal = data.balance || 0;
-            document.getElementById('u-balance').innerText = bal.toFixed(2);
-            document.getElementById('u-ref').innerText = data.referrals || 0;
-            document.getElementById('u-ads').innerText = (data.ads_watched || 0) + " / 10";
-            document.getElementById('u-name').innerText = user?.first_name || "User";
+        async function initApp() {
+            document.getElementById('u-name').innerHTML = (user?.first_name || "User") + ' <span style="color:#3b82f6">✔️</span>';
             document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-            if (user?.photo_url) document.getElementById('user-photo').src = user.photo_url;
-            
-            if(data.completed_tasks['telegram_forever']) {
-                const jBtn = document.getElementById('join-btn');
-                if(jBtn) { jBtn.innerText = "Claimed ✅"; jBtn.disabled = true; jBtn.style.background = "#28a745"; }
+
+            const today = new Date().toDateString();
+            const { data, error } = await supabaseClient.from('users').select('*').eq('id', uId).maybeSingle();
+
+            if (!data) {
+                const startParam = tg.initDataUnsafe?.start_param || "";
+                const newUser = { id: uId, balance: 0, referrals: 0, ads_watched: 0, last_reset_day: today, completed_tasks: {} };
+                await supabaseClient.from('users').insert([newUser]);
+                userDataLocal = newUser;
+            } else {
+                userDataLocal = data;
+                if (data.last_reset_day !== today) {
+                    await supabaseClient.from('users').update({ ads_watched: 0, last_reset_day: today }).eq('id', uId);
+                    userDataLocal.ads_watched = 0;
+                }
+            }
+            updateUI();
+            renderAds();
+        }
+
+        function updateUI() {
+            document.getElementById('u-balance').innerText = (userDataLocal.balance || 0).toFixed(2);
+            document.getElementById('u-ref').innerText = userDataLocal.referrals || 0;
+            document.getElementById('u-ads').innerText = (userDataLocal.ads_watched || 0) + " / 10";
+            if(userDataLocal.completed_tasks['telegram_forever']) {
+                document.getElementById('join-btn').innerText = "Claimed ✅";
+                document.getElementById('join-btn').disabled = true;
             }
         }
 
         const adLinks = ['https://www.effectivegatecpm.com/ryk3u53hv9?key=e22b7e110ad6415a286ab7d67eaaab01', 'https://www.effectivegatecpm.com/kgcr5va9hr?key=d05d5b6553b85edd5d134c8c72222e5c'];
 
-        function renderAds(completedTasks) {
-            const today = new Date().toDateString();
+        function renderAds() {
             const adList = document.getElementById('ad-list');
-            if(!adList) return;
             adList.innerHTML = "";
             for (let i = 1; i <= 9; i++) {
-                const btnId = `ad-${i}`;
-                const isDone = completedTasks[btnId] === today;
+                const isDone = userDataLocal.completed_tasks[`ad-${i}`] === new Date().toDateString();
                 adList.innerHTML += `
                 <div class="ad-card">
-                    <i class="ad-icon">📹</i>
-                    <div class="ad-title">Rewarded Ad #${i}</div>
-                    <button id="btn-${btnId}" onclick="handleTask('${btnId}', '${adLinks[i%2]}', 10)" class="btn-verify">${isDone ? "Done ✅" : "Verify"}</button>
-                    <p id="msg-${btnId}" style="font-size: 11px; margin-top:10px;">${isDone ? "Daily bonus claimed✅" : "১৫ সেকেন্ড বিজ্ঞাপনে থাকুন।"}</p>
+                    <h3>Ad #${i}</h3>
+                    <button onclick="handleTask('ad-${i}', '${adLinks[i%2]}', 10)" class="btn-verify">${isDone ? "Done ✅" : "Verify"}</button>
                 </div>`;
             }
         }
 
-        async function handleTask(id, link, amount) {
-            const today = new Date().toDateString();
-            if (!adStartTimes[id]) {
-                adStartTimes[id] = Date.now();
+        let adTimer = {};
+        async function handleTask(id, link, amt) {
+            if (!adTimer[id]) {
+                adTimer[id] = Date.now();
                 window.open(link, '_blank');
-                tg.showAlert("বিজ্ঞাপনটি ১৫ সেকেন্ড দেখুন এবং তারপর 'Verify' ক্লিক করুন।");
+                tg.showAlert("Stay 15 seconds then click Verify again!");
             } else {
-                const timeSpent = (Date.now() - adStartTimes[id]) / 1000;
-                if (timeSpent < 15) return tg.showAlert(`বাকি আছে ${Math.ceil(15 - timeSpent)} সেকেন্ড!`);
+                if ((Date.now() - adTimer[id]) < 15000) return tg.showAlert("Wait 15 seconds!");
                 
-                const { data } = await supabase.from('users').select('*').eq('id', uId).single();
                 const taskKey = id === 'join-btn' ? 'telegram_forever' : id;
+                const today = new Date().toDateString();
 
-                if (!data.completed_tasks[taskKey] || (taskKey !== 'telegram_forever' && data.completed_tasks[taskKey] !== today)) {
-                    const newTasks = { ...data.completed_tasks, [taskKey]: taskKey === 'telegram_forever' ? true : today };
-                    await supabase.from('users').update({ balance: data.balance + amount, ads_watched: id === 'join-btn' ? data.ads_watched : data.ads_watched + 1, completed_tasks: newTasks }).eq('id', uId);
-                    tg.showAlert("টাকা যোগ হয়েছে! ✅");
-                    location.reload();
-                } else {
-                    tg.showAlert("বোনাস নেওয়া হয়ে গেছে!");
+                if (userDataLocal.completed_tasks[taskKey] !== (taskKey === 'telegram_forever' ? true : today)) {
+                    userDataLocal.balance += amt;
+                    userDataLocal.completed_tasks[taskKey] = (taskKey === 'telegram_forever' ? true : today);
+                    if(id !== 'join-btn') userDataLocal.ads_watched += 1;
+                    
+                    await supabaseClient.from('users').update({ 
+                        balance: userDataLocal.balance, 
+                        ads_watched: userDataLocal.ads_watched, 
+                        completed_tasks: userDataLocal.completed_tasks 
+                    }).eq('id', uId);
+                    
+                    tg.showAlert("Reward Added!");
+                    updateUI();
+                    renderAds();
                 }
             }
         }
 
         async function submitWithdraw() {
             const amt = parseFloat(document.getElementById('w-amount').value);
-            const num = document.getElementById('w-number').value;
-            if (bal < 800 || amt < 800 || !num) return tg.showAlert("সঠিক তথ্য দিন ও মিনিমাম ৮০০ টাকা থাকতে হবে!");
-            await supabase.from('users').update({ balance: bal - amt }).eq('id', uId);
-            tg.showAlert("উত্তোলন সফল হয়েছে! ✅");
+            if (userDataLocal.balance < 800 || amt < 800) return tg.showAlert("Min 800 TK needed!");
+            await supabaseClient.from('users').update({ balance: userDataLocal.balance - amt }).eq('id', uId);
+            tg.showAlert("Request Submitted!");
             location.reload();
         }
 
-        function nav(id, el) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-            document.getElementById(id).classList.add('active-page');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            el.classList.add('active');
-        }
-
-        function copyRef() { navigator.clipboard.writeText(document.getElementById('ref-url').innerText); tg.showAlert("লিঙ্ক কপি হয়েছে!"); }
-        function shareRef() { tg.openTelegramLink(`https://t.me/share/url?url=${document.getElementById('ref-url').innerText}&text=প্রতি রেফারে ৪০ টাকা আয় করুন!`); }
+        function copyRef() { navigator.clipboard.writeText(document.getElementById('ref-url').innerText); tg.showAlert("Copied!"); }
 
         initApp();
     </script>

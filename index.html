@@ -13,8 +13,6 @@
 <meta property="twitter:description" content="প্রতি রেফারে ৪০ টাকা আয় করুন! শুধু বিজ্ঞাপন দেখে প্রতিদিন পেমেন্ট নিন।">
 <meta property="twitter:image" content="https://i.ibb.co/DDJw0SVY/17481.jpg">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* আপনার আগের সব CSS এখানে থাকবে */
@@ -218,290 +216,172 @@
         <button class="nav-item" onclick="nav('withdraw', this)"><i>💰</i>Withdraw</button>
     </nav>
 
-    <script>
-    // আপনার আগের সব কোড (Firebase Config থেকে initApp পর্যন্ত) মুছে দিয়ে এটি বসান
-    const firebaseConfig = { 
-        apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
-        databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
-        projectId: "fojikearn" 
-    };
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+    // আপনার সুপাবেস কানেকশন
+    const SUPABASE_URL = 'https://sncrzqpvanxcylgnhete.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_oJoB60Pmqs5nnFck1zud6A_vfOigadl';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
 
     const user = tg.initDataUnsafe?.user;
     const uId = user?.id ? String(user.id) : "guest_user";
-    const uRef = db.ref('users/' + uId);
+    let bal = 0;
 
-    function getStartParam() {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                let param = tg.initDataUnsafe?.start_param || "";
-                if (!param) {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    param = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || "";
-                }
-                resolve(String(param));
-            }, 700); 
-        });
-    }
-
+    // ১. অ্যাপ শুরু এবং ইউজার চেক
     async function initApp() {
-        const startParam = await getStartParam();
-        const snapshot = await uRef.once('value');
         const today = new Date().toDateString();
+        const startParam = tg.initDataUnsafe?.start_param || "";
 
-        if (!snapshot.exists()) {
+        // ডাটাবেস থেকে ইউজার চেক করা
+        let { data: userData, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', uId)
+            .single();
+
+        if (!userData) {
+            // নতুন ইউজার হলে ডাটাবেসে সেভ করা
             const newUser = {
+                id: uId,
                 balance: 0,
                 referrals: 0,
-                adsWatched: 0,
+                ads_watched: 0,
                 last_reset_day: today,
-                referredBy: (startParam && startParam !== uId) ? startParam : "none",
-                completedTasks: {}
+                referred_by: (startParam && startParam !== uId) ? startParam : "none",
+                completed_tasks: {}
             };
-            await uRef.set(newUser);
+            await supabase.from('users').insert([newUser]);
 
-            if (startParam && startParam !== uId && startParam !== "" && startParam !== "none") {
-                const inviterRef = db.ref('users/' + startParam);
-                inviterRef.transaction((currentData) => {
-                    if (currentData) {
-                        currentData.balance = (Number(currentData.balance) || 0) + 40;
-                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
-                    }
-                    return currentData;
-                });
+            // রেফারেল বোনাস যোগ করা
+            if (startParam && startParam !== uId && startParam !== "") {
+                const { data: inviter } = await supabase.from('users').select('balance, referrals').eq('id', startParam).single();
+                if (inviter) {
+                    await supabase.from('users').update({ 
+                        balance: (inviter.balance || 0) + 40, 
+                        referrals: (inviter.referrals || 0) + 1 
+                    }).eq('id', startParam);
+                }
             }
+            userData = newUser;
         } else {
-            const d = snapshot.val();
-            if (d.last_reset_day !== today) {
-                uRef.update({ adsWatched: 0, last_reset_day: today });
+            // প্রতিদিনের অ্যাড লিমিট রিসেট
+            if (userData.last_reset_day !== today) {
+                await supabase.from('users').update({ ads_watched: 0, last_reset_day: today }).eq('id', uId);
             }
         }
-
-        // রিয়েল টাইম ডাটা আপডেট করার লিসেনার (UI এর জন্য)
-        uRef.on('value', (s) => {
-            const d = s.val() || {};
-            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
-            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-            if(document.getElementById('u-name')) document.getElementById('u-name').innerText = user?.first_name || "User";
-            if(document.getElementById('ref-url')) document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-            if (user?.photo_url && document.getElementById('user-photo')) document.getElementById('user-photo').src = user.photo_url;
-        });
+        
+        updateUI(userData);
+        loadAds();
     }
 
-    // সবশেষে ফাংশনটি অবশ্যই কল করবেন
-    initApp();
-
-// ২. তোমার অ্যাড লিঙ্কগুলো
-const adLinks = [
-    'https://www.effectivegatecpm.com/ryk3u53hv9?key=e22b7e110ad6415a286ab7d67eaaab01',
-    'https://www.effectivegatecpm.com/kgcr5va9hr?key=d05d5b6553b85edd5d134c8c72222e5c',
-    'https://www.effectivegatecpm.com/ryk3u53hv9?key=e22b7e110ad6415a286ab7d67eaaab01',
-    'https://www.effectivegatecpm.com/kgcr5va9hr?key=d05d5b6553b85edd5d134c8c72222e5c'
-];
-
-// ৩. প্রোফাইল ডাটা রিয়েলটাইম আপডেট (UI Update)
-uRef.on('value', (s) => {
-    const d = s.val() || {balance:0, referrals:0, adsWatched:0};
-    bal = d.balance || 0;
-
-    if (user && user.photo_url) {
-        const photoEl = document.getElementById('user-photo');
-        if(photoEl) photoEl.src = user.photo_url;
+    // ২. UI আপডেট করার ফাংশন
+    function updateUI(data) {
+        bal = data.balance || 0;
+        document.getElementById('u-balance').innerText = bal.toFixed(2);
+        document.getElementById('u-ref').innerText = data.referrals || 0;
+        document.getElementById('u-ads').innerText = (data.ads_watched || 0) + " / 10";
+        document.getElementById('u-name').innerText = user?.first_name || "User";
+        document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
+        if (user?.photo_url) document.getElementById('user-photo').src = user.photo_url;
     }
 
-    if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = bal.toFixed(2);
-    if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-    if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
+    // ৩. বিজ্ঞাপনের বক্স তৈরি
+    const adLinks = [
+        'https://www.effectivegatecpm.com/ryk3u53hv9?key=e22b7e110ad6415a286ab7d67eaaab01',
+        'https://www.effectivegatecpm.com/kgcr5va9hr?key=d05d5b6553b85edd5d134c8c72222e5c'
+    ];
 
-    const nameEl = document.getElementById('u-name');
-    if(nameEl) {
-        nameEl.innerHTML = (user ? user.first_name : "User") + ' <img src="https://upload.wikimedia.org/wikipedia/commons/e/e4/Twitter_Verified_Badge.svg" style="width: 16px; vertical-align: middle; margin-left: 5px;">';
-    }
+    async function loadAds() {
+        const { data: d } = await supabase.from('users').select('completed_tasks').eq('id', uId).single();
+        const completedTasks = d?.completed_tasks || {};
+        const today = new Date().toDateString();
+        const adList = document.getElementById('ad-list');
+        adList.innerHTML = "";
 
-    const refUrlEl = document.getElementById('ref-url');
-    if(refUrlEl) {
-        refUrlEl.innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
-    }
-});
-
-        // ২. ৯টি বিজ্ঞাপনের বক্স তৈরি
-        uRef.once('value').then(s => {
-            const d = s.val() || {};
-            const completedTasks = d.completedTasks || {};
-            const today = new Date().toDateString();
-            const adList = document.getElementById('ad-list');
-            
-            if(!adList) return;
-            adList.innerHTML = ""; 
-
-            for(let i=1; i<=9; i++) {
-                const btnId = `ad-${i}`;
-                const currentLink = adLinks[(i-1) % adLinks.length];
-                const isDone = (completedTasks[btnId] === today);
-                const statusText = isDone ? "Daily bonus claimed✅" : "পুরস্কার পেতে ১৫ সেকেন্ড বিজ্ঞাপনে থাকুন।";
-
-                adList.innerHTML += `
+        for(let i=1; i<=9; i++) {
+            const btnId = `ad-${i}`;
+            const isDone = (completedTasks[btnId] === today);
+            adList.innerHTML += `
                 <div class="ad-card">
                     <i class="ad-icon">📹</i>
-                    <div class="ad-title">𝗥𝗲𝘄𝗮𝗿𝗱𝗲𝗱 𝗔𝗱 #${i}</div>
-                    <p style="font-size: 13px; color: #ccc; margin-bottom: 10px;">
-                        প্রতিটি বিজ্ঞাপনের জন্য ১০ টাকা আয় করুন।
-                    </p>
-                    <button id="ad-btn-${i}" onclick="handleTask('${btnId}', '${currentLink}', 10)" class="btn-verify">
-                        Verify <i class="fas fa-check-square"></i>
+                    <div class="ad-title">Reward Ad #${i}</div>
+                    <button id="ad-btn-${i}" onclick="handleTask('${btnId}', '${adLinks[i%2]}', 10)" class="btn-verify">
+                        ${isDone ? "Claimed ✅" : "Verify"}
                     </button>
                     <p id="msg-${btnId}" style="font-size: 11px; color: #8b949e; margin-top: 10px;">
-                        ${statusText}
+                        ${isDone ? "Daily bonus claimed" : "১৫ সেকেন্ড বিজ্ঞাপনে থাকুন।"}
                     </p>
                 </div>`;
-            }
-        });
-
-
-		let adStartTimes = {}; 
-let isWatching = {};
-
-function handleTask(btnId, link, amount) {
-    const today = new Date().toDateString();
-    const btn = document.getElementById(btnId === 'join-btn' ? 'join-btn' : `ad-btn-${btnId.split('-')[1]}`);
-    const msg = document.getElementById(`msg-${btnId}`);
-
-    // --- ১. টেলিগ্রাম চ্যানেল জয়েন টাস্ক (সারাজীবনে মাত্র ১ বার) ---
-    if (btnId === 'join-btn') {
-        uRef.once('value').then(s => {
-            const d = s.val() || {};
-            const completedTasks = d.completedTasks || {};
-            
-            // যদি আগে কখনো এই 'telegram_forever' টাস্কটি করে থাকে
-            if (completedTasks['telegram_forever']) {
-                tg.showAlert("Channel join bonus Already claimed✅");
-                btn.innerText = "Claimed ✅";
-                btn.disabled = true;
-                return;
-            }
-
-            tg.openTelegramLink(link);
-            btn.innerText = "Verifying...";
-            btn.style.pointerEvents = "none";
-
-            setTimeout(() => {
-                uRef.update({
-                    balance: (d.balance || 0) + amount,
-                    [`completedTasks/telegram_forever`]: true // সারাজীবনের জন্য সেভ
-                }).then(() => {
-                    tg.showAlert(`Channel join bonus ${amount} claimed✅`);
-                    btn.innerText = "Claimed ✅";
-                    btn.style.background = "#28a745";
-                });
-            }, 5000);
-        });
-        return; 
+        }
     }
 
-    // --- ২. বক্সের বিজ্ঞাপন টাস্ক (প্রতিদিন ১ বার টাকা পাবেন) ---
-    if (!isWatching[btnId]) {
-        adStartTimes[btnId] = Date.now();
-        isWatching[btnId] = true;
+    let adStartTimes = {};
+    async function handleTask(btnId, link, amount) {
+        const today = new Date().toDateString();
         
-        window.open(link, '_blank'); 
-
-        btn.innerText = "Check Task"; 
-        btn.style.background = "#ffc107"; 
-        btn.style.color = "#000";
-    } else {
-        const timeSpent = (Date.now() - adStartTimes[btnId]) / 1000;
-
-        if (timeSpent < 15) {
-            const left = Math.ceil(15 - timeSpent);
-            tg.showAlert(`❌ আপনি ১৫ সেকেন্ড এড দেখেন নি। আরও ${left} সেকেন্ড দেখুন।`);
-            
-            // বক্স রিসেট
-            btn.innerText = "Verify";
-            btn.style.background = "#007bff";
-            btn.style.color = "#fff";
-            isWatching[btnId] = false;
+        if (!adStartTimes[btnId]) {
+            adStartTimes[btnId] = Date.now();
+            window.open(link, '_blank');
+            tg.showAlert("বিজ্ঞাপনটি ১৫ সেকেন্ড দেখুন এবং তারপর আবার এই অ্যাপে এসে 'Verify' বাটনে ক্লিক করুন।");
         } else {
-            uRef.once('value').then(s => {
-                const d = s.val() || {};
-                const completedTasks = d.completedTasks || {};
-
-                // প্রতিদিনের চেক (আজকের তারিখ অনুযায়ী)
-                if (completedTasks[btnId] !== today) {
-                    uRef.update({
-                        balance: (d.balance || 0) + amount,
-                        adsWatched: (d.adsWatched || 0) + 1,
-                        [`completedTasks/${btnId}`]: today // আজ টাকা পেল
-                    }).then(() => {
-                        tg.showAlert(`Daily bonus ${amount} claimed✅`);
-                        if (msg) msg.innerText = "Daily bonus claimed✅";
-                    });
+            const timeSpent = (Date.now() - adStartTimes[btnId]) / 1000;
+            if (timeSpent < 15) {
+                tg.showAlert(`বাকি আছে ${Math.ceil(15 - timeSpent)} সেকেন্ড!`);
+            } else {
+                const { data: d } = await supabase.from('users').select('*').eq('id', uId).single();
+                if (d.completed_tasks?.[btnId] !== today) {
+                    const newTasks = {...d.completed_tasks, [btnId]: today};
+                    const { error } = await supabase.from('users').update({
+                        balance: d.balance + amount,
+                        ads_watched: (d.ads_watched || 0) + 1,
+                        completed_tasks: newTasks
+                    }).eq('id', uId);
+                    
+                    if (!error) {
+                        tg.showAlert("১০ টাকা যোগ হয়েছে! ✅");
+                        location.reload(); 
+                    }
                 } else {
-                   
-                    if (msg) msg.innerText = "Daily bonus claimed✅";
+                    tg.showAlert("আজকের বোনাস নেওয়া শেষ!");
                 }
-                
-                // বক্স আবার আগের মতো হয়ে যাবে
-                btn.innerText = "Verify";
-                btn.style.background = "#007bff";
-                btn.style.color = "#fff";
-                isWatching[btnId] = false;
-            });
+            }
         }
     }
-}
-        // বাকি ফাংশনগুলো
-        function submitWithdraw() {
-    const method = document.getElementById('w-method').value; // পদ্ধতি ধরার জন্য
-    const amtInput = document.getElementById('w-amount').value;
-    const amt = parseFloat(amtInput);
-    const num = document.getElementById('w-number').value;
 
-    if(!method || !amtInput || !num) { 
-        tg.showAlert("সব তথ্য পূরণ করুন।"); 
-        return; 
-    }
-    
-    if(bal < 800) { 
-        tg.showAlert("দুঃখীত পর্যাপ্ত ব্যালেন্স নাই।"); 
-    }
-    else if(amt < 800) { 
-        tg.showAlert("Minimum Withdraw: 800 Taka"); 
-    }
-    else {
-        uRef.update({ balance: bal - amt }).then(() => {
-            tg.showAlert("Withdraw Request Successful✅");
-            document.getElementById('w-amount').value = "";
-            document.getElementById('w-number').value = "";
-            document.getElementById('w-method').value = ""; // রিসেট
-        });
-    }
-		}
+    async function submitWithdraw() {
+        const method = document.getElementById('w-method').value;
+        const amt = parseFloat(document.getElementById('w-amount').value);
+        const num = document.getElementById('w-number').value;
 
-        function copyRef() {
-            const link = document.getElementById('ref-url').innerText;
-            const el = document.createElement('textarea');
-            el.value = link; document.body.appendChild(el);
-            el.select(); document.execCommand('copy');
-            document.body.removeChild(el);
-            tg.showAlert("Link copied");
-        }
+        if(!method || !amt || !num) return tg.showAlert("সব তথ্য দিন!");
+        if(bal < 800) return tg.showAlert("ন্যূনতম ৮০০ টাকা লাগবে!");
+        
+        await supabase.from('users').update({ balance: bal - amt }).eq('id', uId);
+        tg.showAlert("উত্তোলন সফল হয়েছে! ✅");
+        location.reload();
+    }
 
-        function shareRef() {
-            const link = document.getElementById('ref-url').innerText;
-            tg.openTelegramLink(`https://t.me/share/url?url=${link}&text=Earn easily!`);
-        }
+    function copyRef() {
+        const link = document.getElementById('ref-url').innerText;
+        navigator.clipboard.writeText(link);
+        tg.showAlert("লিঙ্ক কপি হয়েছে!");
+    }
 
-        function nav(id, el) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-            document.getElementById(id).classList.add('active-page');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            el.classList.add('active');
-        }
-	</script>
-</body>
-</html>
+    function shareRef() {
+        const link = document.getElementById('ref-url').innerText;
+        tg.openTelegramLink(`https://t.me/share/url?url=${link}&text=প্রতি রেফারে ৪০ টাকা আয় করুন!`);
+    }
+
+    function nav(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+        document.getElementById(id).classList.add('active-page');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    initApp();
+				</script>

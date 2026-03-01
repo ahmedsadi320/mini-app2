@@ -288,25 +288,32 @@ const uRef = db.ref('users/' + uId);
 
         // রিয়েল টাইম ডাটা আপডেট করার লিসেনার (UI এর জন্য)
         uRef.on('value', (s) => {
-    const d = s.val() || {};
-    
-    // ব্যালেন্স এবং নাম আপডেট
-    if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
-    if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-    if(document.getElementById('u-name')) document.getElementById('u-name').innerText = user?.first_name || "User";
-    
-    // রেফারেল লিঙ্ক (এটি নিরাপদভাবে দিন যেন এরর না হয়)
-    const refUrlEl = document.getElementById('ref-url');
-    if(refUrlEl) {
-        // uId থাকলে লিঙ্ক দেখাবে, না থাকলে Loading দেখাবে
-        refUrlEl.innerText = uId ? `https://t.me/fojikearn_bot?startapp=${uId}` : "Loading Link...";
-    }
+    try {
+        const d = s.val() || {};
+        
+        // আইডি ধরে ধরে চেক করে ডাটা বসানো (সেফ পদ্ধতি)
+        const balEl = document.getElementById('u-balance');
+        const refEl = document.getElementById('u-ref');
+        const nameEl = document.getElementById('u-name');
+        const refUrlEl = document.getElementById('ref-url');
+        const photoEl = document.getElementById('user-photo');
 
-    if (user?.photo_url && document.getElementById('user-photo')) {
-        document.getElementById('user-photo').src = user.photo_url;
+        if(balEl) balEl.innerText = (d.balance || 0).toFixed(2);
+        if(refEl) refEl.innerText = d.referrals || 0;
+        if(nameEl) nameEl.innerText = user?.first_name || "User";
+        
+        // রেফার লিঙ্ক চেক
+        if(refUrlEl && uId) {
+            refUrlEl.innerText = 'https://t.me/fojikearn_bot?startapp=' + uId;
+        }
+
+        if(photoEl && user?.photo_url) {
+            photoEl.src = user.photo_url;
+        }
+    } catch (err) {
+        console.error("Error updating UI: ", err);
     }
 });
-    }
 
     // সবশেষে ফাংশনটি অবশ্যই কল করবেন
     initApp();

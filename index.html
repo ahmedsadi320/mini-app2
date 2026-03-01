@@ -250,37 +250,43 @@
     }
 
     async function initApp() {
-        const startParam = await getStartParam();
-        const snapshot = await uRef.once('value');
-        const today = new Date().toDateString();
+    // ১. সঠিক উপায়ে প্যারামিটার ধরা
+    const urlParams = new URLSearchParams(window.location.search);
+    let startParam = tg.initDataUnsafe?.start_param || urlParams.get('tgWebAppStartParam') || "";
+    
+    const snapshot = await uRef.once('value');
+    const today = new Date().toDateString();
 
-        if (!snapshot.exists()) {
-            const newUser = {
-                balance: 0,
-                referrals: 0,
-                adsWatched: 0,
-                last_reset_day: today,
-                referredBy: (startParam && startParam !== uId) ? startParam : "none",
-                completedTasks: {}
-            };
-            await uRef.set(newUser);
-
-            if (startParam && startParam !== uId && startParam !== "" && startParam !== "none") {
-                const inviterRef = db.ref('users/' + startParam);
-                inviterRef.transaction((currentData) => {
-                    if (currentData) {
-                        currentData.balance = (Number(currentData.balance) || 0) + 40;
-                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
-                    }
-                    return currentData;
-                });
-            }
-        } else {
-            const d = snapshot.val();
-            if (d.last_reset_day !== today) {
-                uRef.update({ adsWatched: 0, last_reset_day: today });
-            }
+    if (!snapshot.exists()) {
+        // নতুন ইউজার হলে আগে রেফারারকে বোনাস দিন, তারপর নিজের ডাটা সেভ করুন
+        if (startParam && startParam !== uId && startParam !== "") {
+            const inviterRef = db.ref('users/' + startParam);
+            await inviterRef.transaction((currentData) => {
+                if (currentData) {
+                    currentData.balance = (Number(currentData.balance) || 0) + 40;
+                    currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+                }
+                return currentData;
+            });
         }
+
+        // এবার নতুন ইউজারের ডাটা সেভ করুন
+        const newUser = {
+            balance: 0,
+            referrals: 0,
+            adsWatched: 0,
+            last_reset_day: today,
+            referredBy: (startParam && startParam !== uId) ? String(startParam) : "none",
+            completedTasks: {}
+        };
+        await uRef.set(newUser);
+    } else {
+        const d = snapshot.val();
+        if (d.last_reset_day !== today) {
+            uRef.update({ adsWatched: 0, last_reset_day: today });
+        }
+    }
+	}
 
         // রিয়েল টাইম ডাটা আপডেট করার লিসেনার (UI এর জন্য)
         uRef.on('value', (s) => {
@@ -288,7 +294,7 @@
             if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
             if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
             if(document.getElementById('u-name')) document.getElementById('u-name').innerText = user?.first_name || "User";
-            if(document.getElementById('ref-url')) document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot/app?startapp=${uId}`;
+            document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot?startapp=${uId}`;
             if (user?.photo_url && document.getElementById('user-photo')) document.getElementById('user-photo').src = user.photo_url;
         });
     }

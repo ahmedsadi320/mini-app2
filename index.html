@@ -229,12 +229,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
-
-    const user = tg.initDataUnsafe?.user;
-    const uId = user?.id ? String(user.id) : "guest_user";
-    const uRef = db.ref('users/' + uId);
+const user = tg.initDataUnsafe?.user;
+// uId কে গ্লোবাল ভেরিয়েবল হিসেবে রাখুন যেন সব ফাংশন এটি পায়
+const uId = user?.id ? String(user.id) : "guest_user"; 
+const uRef = db.ref('users/' + uId);
 
     function getStartParam() {
         return new Promise((resolve) => {
@@ -290,13 +288,24 @@
 
         // রিয়েল টাইম ডাটা আপডেট করার লিসেনার (UI এর জন্য)
         uRef.on('value', (s) => {
-            const d = s.val() || {};
-            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
-            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-            if(document.getElementById('u-name')) document.getElementById('u-name').innerText = user?.first_name || "User";
-            document.getElementById('ref-url').innerText = `https://t.me/fojikearn_bot?startapp=${uId}`;
-            if (user?.photo_url && document.getElementById('user-photo')) document.getElementById('user-photo').src = user.photo_url;
-        });
+    const d = s.val() || {};
+    
+    // ব্যালেন্স এবং নাম আপডেট
+    if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
+    if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+    if(document.getElementById('u-name')) document.getElementById('u-name').innerText = user?.first_name || "User";
+    
+    // রেফারেল লিঙ্ক (এটি নিরাপদভাবে দিন যেন এরর না হয়)
+    const refUrlEl = document.getElementById('ref-url');
+    if(refUrlEl) {
+        // uId থাকলে লিঙ্ক দেখাবে, না থাকলে Loading দেখাবে
+        refUrlEl.innerText = uId ? `https://t.me/fojikearn_bot?startapp=${uId}` : "Loading Link...";
+    }
+
+    if (user?.photo_url && document.getElementById('user-photo')) {
+        document.getElementById('user-photo').src = user.photo_url;
+    }
+});
     }
 
     // সবশেষে ফাংশনটি অবশ্যই কল করবেন

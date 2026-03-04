@@ -220,13 +220,13 @@
 
     <script>
     // আপনার আগের সব কোড (Firebase Config থেকে initApp পর্যন্ত) মুছে দিয়ে এটি বসান
-    const firebaseConfig = { 
+    const firebaseConfig = 
         apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U", 
         databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
         projectId: "fojikearn" 
-    };
+	
 
-    firebase.initializeApp(firebaseConfig);
+   firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const tg = window.Telegram.WebApp;
 const user = tg.initDataUnsafe?.user;

@@ -219,12 +219,17 @@
     </nav>
 
     <script>
-    // আপনার আগের সব কোড (Firebase Config থেকে initApp পর্যন্ত) মুছে দিয়ে এটি বসান
-    const firebaseConfig = { 
-        apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7", 
-        databaseURL: "https://fojikearn-default-rtdb.firebaseio.com", 
-        projectId: "fojikearn" 
-    };
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBLLd_QBvaxXSq2zWi3_wjQQ7CKb7-5a6U",
+  authDomain: "fojikearn.firebaseapp.com",
+  databaseURL: "https://fojikearn-default-rtdb.firebaseio.com",
+  projectId: "fojikearn",
+  storageBucket: "fojikearn.firebasestorage.app",
+  messagingSenderId: "531323086321",
+  appId: "1:531323086321:web:74005dfca91a29bffdd050",
+  measurementId: "G-WCRS8MR2LX"
+};
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
